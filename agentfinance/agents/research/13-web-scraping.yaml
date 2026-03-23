@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - Web Scraping Agent (13)
+# Department: Research Intelligence
+
+agent:
+  name: Web Scraping Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/research/web_scraping.py
+  skills:
+    - web-crawling
+    - data-extraction
+    - html-parsing
+    - api-integration
+  budget: $8/month
+  triggers:
+    - webhook: /scrape/start
+    - scheduled: on-demand
+
+commands:
+  - name: /scrape:url
+    description: Scrape content from URL
+    syntax: /scrape:url <URL>
+  - name: /scrape:extract
+    description: Extract structured data
+    syntax: /scrape:extract <URL> <SELECTOR>
+  - name: /scrape:financials
+    description: Scrape financial data
+    syntax: /scrape:financials <TICKER>
+  - name: /scrape:monitor
+    description: Set up monitoring scrape
+    syntax: /scrape:monitor <URL> <CRON>

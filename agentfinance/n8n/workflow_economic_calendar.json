@@ -1,0 +1,346 @@
+{
+  "name": "AgentFinance - Economic Calendar Block",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "cronExpression", "expression": "*/30 * * * *"}]}
+      },
+      "name": "Every 30 Minutes Cron",
+      "type": "n8n-nodes-base.cron",
+      "position": [0, 0],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "https://api.tradingeconomics.com/calendar",
+        "queryParameters": {
+          "parameters": [
+            {"name": "key", "value": "{{ $env.TRADINGECONOMICS_KEY }}"},
+            {"name": "countries", "value": "united states"},
+            {"name": "from", "value": "{{ $now.toISOString().split('T')[0] }}"},
+            {"name": "to", "value": "{{ $now.toISOString().split('T')[0] }}"}
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {"response": {}}
+        }
+      },
+      "name": "Fetch Economic Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [220, 0],
+      "notes": "Replaced Investing.com with TradingEconomics API. Set TRADINGECONOMICS_KEY env var instead of INVESTING_API_KEY."
+    },
+    {
+      "parameters": {
+        "functionCode": "// Filter for high impact events in next 4 hours\n// TradingEconomics format: {Calendar: [{Country, Event, Date, Impact, Currency, ...}]}\nconst raw = $input.first().json;\nconst events = Array.isArray(raw) ? raw : (raw.Calendar || []);\nconst now = new Date();\nconst cutoff = new Date(now.getTime() + 4 * 60 * 60 * 1000);\n\n// Map TradingEconomics fields to our format\nconst mappedEvents = events.map(e => ({\n  datetime: e.Date,\n  event: e.Event,\n  impact: e.Impact || 'medium',\n  currency: e.Country === 'United States' ? 'USD' : (e.Country === 'Euro Zone' ? 'EUR' : e.Currency || ''),\n  previous: e.Previous,\n  forecast: e.Forecast,\n  actual: e.Actual,\n}));\n\nconst highImpactEvents = mappedEvents.filter(e => {\n  const eventTime = new Date(e.datetime);\n  const isHigh = e.impact && e.impact.toLowerCase().includes('high');\n  return isHigh && eventTime >= now && eventTime <= cutoff;\n});\n\nhighImpactEvents.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));\n\nconst soonEvents = mappedEvents.filter(e => {\n  const eventTime = new Date(e.datetime);\n  const diff = eventTime - now;\n  const isHigh = e.impact && e.impact.toLowerCase().includes('high');\n  return diff > 0 && diff <= 30 * 60 * 1000 && isHigh;\n});\n\nreturn {\n  json: {\n    highImpactEvents: highImpactEvents,\n    soonEvents: soonEvents,\n    blockActive: soonEvents.length > 0,\n    eventCount: highImpactEvents.length,\n    soonCount: soonEvents.length,\n    nextEvent: highImpactEvents[0] || null,\n    currentTime: now.toISOString()\n  }\n};",
+        "name": "Filter High Impact Events",
+        "type": "n8n-nodes-base.function",
+        "position": [440, 0],
+        "notes": "Updated to parse TradingEconomics JSON format instead of Investing.com"
+      },
+      "name": "Filter High Impact Events",
+      "type": "n8n-nodes-base.function",
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "event-imminent",
+              "leftValue": "={{ $json.soonCount }}",
+              "rightValue": 0,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Event Within 30 Minutes?",
+      "type": "n8n-nodes-base.if",
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Activate trade block and send alert\nconst data = $input.first().json;\nconst soonEvents = data.soonEvents;\nconst nextEvent = soonEvents[0];\n\nconst affectedPairs = {\n  'USD': ['EURUSD', 'GBPUSD', 'USDCAD', 'USDJPY', 'AUDUSD', 'USDCHF'],\n  'EUR': ['EURUSD', 'EURGBP', 'EURJPY', 'EURAUD', 'EURCAD'],\n  'GBP': ['GBPUSD', 'EURGBP', 'GBPJPY', 'GBPAUD'],\n  'JPY': ['USDJPY', 'EURJPY', 'GBPJPY'],\n  'AUD': ['AUDUSD', 'AUDJPY', 'EURAUD'],\n  'CAD': ['USDCAD', 'EURCAD'],\n  'CHF': ['USDCHF', 'EURCHF'],\n  'NZD': ['NZDUSD', 'AUDNZD']\n};\n\nconst affectedCurrencies = [...new Set(soonEvents.map(e => e.currency).filter(c => c))];\nconst pairsToBlock = [...new Set(affectedCurrencies.flatMap(c => affectedCurrencies.flatMap(d => affectedCurrencies.length ? (affectedPairs[c] || []).filter(p => affectedPairs[d] && affectedPairs[d].includes(p)) : []))];\n\nreturn {\n  json: {\n    action: 'ACTIVATE_BLOCK',\n    reason: 'HIGH_IMPACT_EVENT',\n    eventName: nextEvent.event,\n    currency: nextEvent.currency,\n    impact: nextEvent.impact,\n    time: nextEvent.datetime,\n    minutesUntil: Math.round((new Date(nextEvent.datetime) - new Date(data.currentTime)) / (60 * 1000)),\n    affectedCurrencies: affectedCurrencies,\n    pairsToBlock: [...new Set(pairsToBlock)],\n    allEvents: soonEvents,\n    blockDuration: 45, // 30 min before + 15 min after\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Prepare Trade Block",
+      "type": "n8n-nodes-base.function",
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "key": "trade_block",
+        "value": "={{ $json }}",
+        "options": {
+          "ttl": 3600
+        }
+      },
+      "name": "Set Trade Block in Redis",
+      "type": "n8n-nodes-base.redis",
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Build Telegram alert message\nconst block = $input.first().json;\nconst eventList = block.allEvents.map(e => `• *${e.event}* (${e.currency}) — ${e.datetime}`).join('\\n');\n\nconst pairsList = block.pairsToBlock.length > 0 ? `\\n*Affected Pairs:* ${block.pairsToBlock.join(', ')}` : '';\n\nreturn {\n  json: {\n    message: `⚠️ *TRADE BLOCK ACTIVATED*\\n\\n*High-impact event in ${block.minutesUntil} minutes:*\\n${eventList}\\n\\n*Duration:* ${block.blockDuration} minutes (30 before + 15 after)${pairsList}\\n\\n🔴 *All automated execution BLOCKED during window*\\n🕐 ${block.timestamp}`\n  }\n};"
+      },
+      "name": "Format Block Alert",
+      "type": "n8n-nodes-base.function",
+      "position": [1320, -100]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "={{ $json.message }}"
+      },
+      "name": "Telegram Block Alert",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1540, -100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/trade_blocks",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "timestamp", "value": "={{ $json.timestamp }}"},
+            {"name": "reason", "value": "={{ $json.reason }}"},
+            {"name": "event_name", "value": "={{ $json.eventName }}"},
+            {"name": "currency", "value": "={{ $json.currency }}"},
+            {"name": "impact", "value": "={{ $json.impact }}"},
+            {"name": "event_time", "value": "={{ $json.time }}"},
+            {"name": "affected_currencies", "value": "={{ JSON.stringify($json.affectedCurrencies) }}"},
+            {"name": "pairs_blocked", "value": "={{ JSON.stringify($json.pairsToBlock) }}"},
+            {"name": "duration_minutes", "value": "={{ $json.blockDuration }}"},
+            {"name": "status", "value": "ACTIVE"}
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "{{ $env.SUPABASE_KEY }}"},
+            {"name": "Authorization", "value": "Bearer {{ $env.SUPABASE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        }
+      },
+      "name": "Log Block to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1540, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-events",
+              "leftValue": "={{ $json.eventCount }}",
+              "rightValue": 0,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Events in Next 4 Hours?",
+      "type": "n8n-nodes-base.if",
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Send upcoming events info\nconst data = $input.first().json;\nconst upcoming = data.highImpactEvents;\n\nconst eventList = upcoming.slice(0, 5).map(e => {\n  const eventTime = new Date(e.datetime);\n  const now = new Date();\n  const hoursUntil = Math.round((eventTime - now) / (60 * 60 * 1000) * 10) / 10;\n  return `• *${e.event}* (${e.currency}) — ${hoursUntil}h`;\n}).join('\\n');\n\nreturn {\n  json: {\n    message: `📅 *Economic Calendar Preview*\\n\\n*${upcoming.length} high-impact events in next 4 hours:*\\n${eventList}\\n\\nCurrent block status: ${data.blockActive ? '🔴 ACTIVE' : '🟢 CLEAR'}`\n  }\n};"
+      },
+      "name": "Format Calendar Preview",
+      "type": "n8n-nodes-base.function",
+      "position": [880, 200]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "={{ $json.message }}"
+      },
+      "name": "Telegram Calendar Preview",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check existing positions in affected pairs\nconst block = $input.first().json;\nconst url = `{{ $env.CTRADER_API_URL }}/v2/positions`;\n\nreturn block;"
+      },
+      "name": "Prepare Position Check",
+      "type": "n8n-nodes-base.function",
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/positions",
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"}
+          ]
+        }
+      },
+      "name": "Get Open Positions",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if any positions are in affected pairs\nconst positions = $input.first().json.positions || [];\nconst blockData = $('Prepare Position Check').first().json;\nconst affectedPairs = blockData.pairsToBlock || [];\n\nconst exposedPositions = positions.filter(p => affectedPairs.includes(p.symbol));\n\nif (exposedPositions.length === 0) {\n  return [];\n}\n\nreturn exposedPositions.map(p => ({\n  json: {\n    positionId: p.positionId,\n    symbol: p.symbol,\n    direction: p.direction,\n    volume: p.volume,\n    unrealizedPnLPips: p.unrealizedPnLPips,\n    entryPrice: p.entryPrice,\n    eventName: blockData.eventName\n  }\n}));"
+      },
+      "name": "Check Exposed Positions",
+      "type": "n8n-nodes-base.function",
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format position alert for affected pairs\nconst positions = $input.all().map(n => n.json);\nconst blockData = $('Prepare Position Check').first().json;\n\nconst posList = positions.map(p => \n  `• #${p.positionId}: ${p.direction} ${p.volume} lots ${p.symbol} (${p.unrealizedPnLPips} pips)`\n).join('\\n');\n\nreturn {\n  json: {\n    message: `⚠️ *EXPOSED POSITIONS ALERT*\\n\\n*High-impact event approaching:* ${blockData.eventName}\\n*Time:* ${blockData.time}\\n\\n*Positions in affected pairs:*\\n${posList}\\n\\n💡 Consider reducing risk or manually monitoring these trades during the event window.`\n  }\n};"
+      },
+      "name": "Format Exposed Alert",
+      "type": "n8n-nodes-base.function",
+      "position": [1760, 0]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "={{ $json.message }}"
+      },
+      "name": "Telegram Exposed Alert",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1980, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-exposed",
+              "leftValue": "={{ $json.positionId }}",
+              "rightValue": "",
+              "operator": {"type": "string", "operation": "exists"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Any Exposed Positions?",
+      "type": "n8n-nodes-base.if",
+      "position": [1760, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log that no action was needed\nreturn {\n  json: {\n    status: 'CLEAR',\n    timestamp: new Date().toISOString(),\n    message: 'No high-impact events in next 4 hours. Trading window clear.'\n  }\n};"
+      },
+      "name": "No Events - Continue",
+      "type": "n8n-nodes-base.function",
+      "position": [880, 400]
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes Cron": {
+      "main": [[{"node": "Fetch Economic Calendar", "type": "main", "index": 0}]]
+    },
+    "Fetch Economic Calendar": {
+      "main": [[{"node": "Filter High Impact Events", "type": "main", "index": 0}]]
+    },
+    "Filter High Impact Events": {
+      "main": [
+        [{"node": "Event Within 30 Minutes?", "type": "main", "index": 0}],
+        [{"node": "Events in Next 4 Hours?", "type": "main", "index": 0}]
+      ]
+    },
+    "Event Within 30 Minutes?": {
+      "main": [
+        [{"node": "Prepare Trade Block", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Prepare Position Check", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare Trade Block": {
+      "main": [
+        [{"node": "Set Trade Block in Redis", "type": "main", "index": 0}]
+      ]
+    },
+    "Set Trade Block in Redis": {
+      "main": [
+        [{"node": "Format Block Alert", "type": "main", "index": 0}],
+        [{"node": "Log Block to Supabase", "type": "main", "index": 0}]
+      ]
+    },
+    "Format Block Alert": {
+      "main": [[{"node": "Telegram Block Alert", "type": "main", "index": 0}]]
+    },
+    "Log Block to Supabase": {
+      "main": [
+        [{"node": "Prepare Position Check", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare Position Check": {
+      "main": [[{"node": "Get Open Positions", "type": "main", "index": 0}]]
+    },
+    "Get Open Positions": {
+      "main": [[{"node": "Check Exposed Positions", "type": "main", "index": 0}]]
+    },
+    "Check Exposed Positions": {
+      "main": [
+        [{"node": "Format Exposed Alert", "type": "main", "index": 0}],
+        [{"node": "Any Exposed Positions?", "type": "main", "index": 0}]
+      ]
+    },
+    "Any Exposed Positions?": {
+      "main": [
+        [{"node": "Format Exposed Alert", "type": "main", "index": 0}]
+      ]
+    },
+    "Format Exposed Alert": {
+      "main": [[{"node": "Telegram Exposed Alert", "type": "main", "index": 0}]]
+    },
+    "Telegram Exposed Alert": {
+      "main": [[]]
+    },
+    "Events in Next 4 Hours?": {
+      "main": [
+        [{"node": "Format Calendar Preview", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "No Events - Continue", "type": "main", "index": 0}]
+      ]
+    },
+    "Format Calendar Preview": {
+      "main": [[{"node": "Telegram Calendar Preview", "type": "main", "index": 0}]]
+    },
+    "Telegram Calendar Preview": {
+      "main": [[]]
+    },
+    "Telegram Block Alert": {
+      "main": [[]]
+    },
+    "No Events - Continue": {
+      "main": [[]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "UTC"
+  },
+  "tags": ["trading", "risk-management", "automation", "economic-calendar"],
+  "description": "Monitors economic calendar every 30 minutes, activates trade blocks 30 min before high-impact events, alerts on exposed positions",
+  "active": true
+}

@@ -1,0 +1,103 @@
+# Agent Configuration
+# AgentFinance v3 - SMC Strategy Agent (22)
+# Department: Trading Strategy Engine
+
+agent:
+  name: SMC Strategy Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/smc_strategy.py
+  skills:
+    - smc-order-blocks
+    - smc-fair-value-gaps
+    - smc-bos-choch
+    - smc-liquidity
+    - smc-kill-zones
+    - smc-confluence
+    - smc-silver-bullet
+    - smc-judas-swing
+    - smc-power-of-3
+  budget: $30/month
+  triggers:
+    - cron: "*/15 0-22 * * 1-5"
+    - webhook: /smc/analyze
+    - event: kill_zone_activated
+  context_window: 32k
+  temperature: 0.2
+  memory:
+    enabled: true
+    vector_store: agentfinance-smc
+
+metadata:
+  agent_id: 22
+  department: Trading Strategy Engine
+  priority: CRITICAL
+  engine: smartmoneyconcepts
+  
+commands:
+  /smc:scan <SYMBOL>:
+    description: Full SMC scan on symbol
+    example: /smc:scan EURUSD
+    
+  /smc:ob <SYMBOL> <TF>:
+    description: Order block analysis
+    example: /smc:ob EURUSD H4
+    
+  /smc:fvg <SYMBOL> <TF>:
+    description: Fair value gap analysis
+    example: /smc:fvg EURUSD H1
+    
+  /smc:bos <SYMBOL>:
+    description: Break of structure analysis
+    example: /smc:bos EURUSD
+    
+  /smc:liquidity <SYMBOL>:
+    description: Liquidity zone analysis
+    example: /smc:liquidity EURUSD
+    
+  /smc:premium <SYMBOL>:
+    description: Premium/discount zones
+    example: /smc:premium EURUSD
+    
+  /smc:setup <SYMBOL>:
+    description: Generate trade setup
+    example: /smc:setup EURUSD
+    
+  /smc:silver-bullet:
+    description: Silver bullet pattern alert
+    example: /smc:silver-bullet
+    
+  /smc:judas-swing:
+    description: Judas swing detection
+    example: /smc:judas-swing
+    
+  /smc:power-of-3 <SYMBOL>:
+    description: AMD analysis
+    example: /smc:power-of-3 EURUSD
+    
+  /smc:kill-zones:
+    description: Kill zone status
+    example: /smc:kill-zones
+    
+  /smc:bias <SYMBOL>:
+    description: Market bias determination
+    example: /smc:bias EURUSD
+    
+  /smc:confluence <SYMBOL>:
+    description: Confluence score
+    example: /smc:confluence EURUSD
+    
+  /smc:report:
+    description: SMC daily report
+    example: /smc:report
+
+execution:
+  timeout: 180s
+  retry_attempts: 3
+  cache_ttl: 900s
+  
+parameters:
+  swing_length: 50
+  min_confidence: 0.75
+  timeframes: [M15, H1, H4, D1]
+  kill_zone_required: true

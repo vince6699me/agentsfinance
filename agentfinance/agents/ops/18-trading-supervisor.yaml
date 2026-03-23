@@ -1,0 +1,38 @@
+# Agent Configuration
+# AgentFinance v3 - Trading Supervisor Agent (18)
+# Department: Investment Operations
+
+agent:
+  name: Trading Supervisor Agent
+  model: llama3.1:70b  # Upgraded: needs long context for multi-position oversight
+  adapter: python
+  script: /home/agent/agentfinance/agents/ops/trading_supervisor.py
+  skills:
+    - trade-oversight
+    - signal-approval
+    - trade-review
+    - kill-switch
+  budget: $15/month
+  triggers:
+    - webhook: /supervisor/signal
+    - cron: "0 */15 * * 1-5"  # Every 15 min during markets
+
+commands:
+  - name: /supervisor:signals
+    description: Pending trade signals
+    syntax: /supervisor:signals
+  - name: /supervisor:approve
+    description: Approve a signal
+    syntax: /supervisor:approve <SIGNAL-ID>
+  - name: /supervisor:reject
+    description: Reject a signal
+    syntax: /supervisor:reject <SIGNAL-ID>
+  - name: /supervisor:review
+    description: Review recent trades
+    syntax: /supervisor:review
+  - name: /supervisor:kill
+    description: Emergency kill switch
+    syntax: /supervisor:kill
+  - name: /supervisor:resume
+    description: Resume trading
+    syntax: /supervisor:resume

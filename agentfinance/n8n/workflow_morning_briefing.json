@@ -1,0 +1,119 @@
+{
+  "name": "AgentFinance - Morning Intelligence Briefing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1-5"
+            }
+          ]
+        }
+      },
+      "name": "Daily 06:00 UTC",
+      "type": "n8n-nodes-base.cron",
+      "position": [0, 0],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Fetch economic calendar for today\n# Returns high/medium impact events\n\nimport datetime\n\nevents = [\n    {\n        \"time\": \"08:30\",\n        \"currency\": \"USD\",\n        \"event\": \"Core CPI (MoM)\",\n        \"impact\": \"HIGH\",\n        \"forecast\": \"0.3%\",\n        \"previous\": \"0.4%\"\n    },\n    {\n        \"time\": \"10:00\",\n        \"currency\": \"USD\",\n        \"event\": \"ISM Manufacturing PMI\",\n        \"impact\": \"HIGH\",\n        \"forecast\": \"50.5\",\n        \"previous\": \"50.3\"\n    },\n    {\n        \"time\": \"14:00\",\n        \"currency\": \"USD\",\n        \"event\": \"FOMC Minutes\",\n        \"impact\": \"HIGH\",\n        \"forecast\": \"-\",\n        \"previous\": \"-\"\n    }\n]\n\nreturn {\"calendar\": events, \"high_impact\": len([e for e in events if e.impact == \"HIGH\"])}"
+      },
+      "name": "Economic Calendar",
+      "type": "n8n-nodes-base.python",
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Run overnight SMC analysis\n# Check for setups formed during Asian session\n\novernight_analysis = {\n    \"EURUSD\": {\n        \"bias\": \"BULLISH\",\n        \"overnight_range\": 45,\n        \"setups\": [{\n            \"type\": \"LONG\",\n            \"entry\": 1.0842,\n            \"stop_loss\": 1.0815,\n            \"tp\": 1.0890,\n            \"pattern\": \"Asian Low OB\"\n        }]\n    },\n    \"GBPUSD\": {\n        \"bias\": \"NEUTRAL\",\n        \"overnight_range\": 32,\n        \"setups\": []\n    },\n    \"XAUUSD\": {\n        \"bias\": \"BULLISH\",\n        \"overnight_range\": 1250,\n        \"setups\": [{\n            \"type\": \"LONG\",\n            \"entry\": 2015,\n            \"stop_loss\": 1995,\n            \"tp\": 2050,\n            \"pattern\": \"Support OB\"\n        }]\n    }\n}\n\nreturn {\"analyses\": overnight_analysis}"
+      },
+      "name": "Overnight SMC Analysis",
+      "type": "n8n-nodes-base.python",
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Check for new COT report\n# Released every Friday\n\nimport datetime\nnow = datetime.datetime.now()\n\nis_friday = now.weekday() == 4\nis_recent_release = now.weekday() == 0 and (now - datetime.timedelta(days=2)).weekday() == 4\n\ncot_update = None\nif is_friday or is_recent_release:\n    cot_update = {\n        \"EUR\": {\n            \"net_commercial\": 45234,\n            \"percentile\": 78,\n            \"signal\": \"BULLISH\"\n        },\n        \"GBP\": {\n            \"net_commercial\": 28156,\n            \"percentile\": 65,\n            \"signal\": \"NEUTRAL\"\n        },\n        \"JPY\": {\n            \"net_commercial\": -23456,\n            \"percentile\": 22,\n            \"signal\": \"BEARISH\"\n        }\n    }\n\nreturn {\"cot_update\": cot_update, \"has_update\": cot_update is not None}"
+      },
+      "name": "COT Report Check",
+      "type": "n8n-nodes-base.python",
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Get active positions status\n\npositions = [\n    {\n        \"id\": \"POS-001\",\n        \"symbol\": \"EURUSD\",\n        \"direction\": \"BUY\",\n        \"volume\": 0.10,\n        \"entry\": 1.0820,\n        \"current\": 1.0845,\n        \"pnl\": 25.00,\n        \"unrealized_pnl_pct\": 0.24\n    }\n]\n\naccount = {\n    \"balance\": 10025.00,\n    \"equity\": 10050.00,\n    \"daily_pnl\": 25.00,\n    \"open_positions\": len(positions)\n}\n\nreturn {\"positions\": positions, \"account\": account}"
+      },
+      "name": "Active Positions",
+      "type": "n8n-nodes-base.python",
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Get kill zone schedule\nimport datetime\n\nschedule = [\n    {\"time\": \"02:50 EST\", \"session\": \"London Open\", \"pairs\": [\"GBPUSD\", \"EURUSD\"]},\n    {\"time\": \"08:00 EST\", \"session\": \"New York Open\", \"pairs\": [\"EURUSD\", \"USDJPY\"]},\n    {\"time\": \"10:30 EST\", \"session\": \"London Close\", \"pairs\": [\"EURUSD\", \"GBPUSD\"]}\n]\n\nreturn {\"kill_zone_schedule\": schedule}"
+      },
+      "name": "Kill Zone Schedule",
+      "type": "n8n-nodes-base.python",
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Macro regime analysis\n\nmacro_regime = {\n    \"regime\": \"REFILATION\",\n    \"description\": \"Stable rates, rising inflation, recovering growth\",\n    \"asset_impacts\": {\n        \"equities\": \"POSITIVE\",\n        \"bonds\": \"NEUTRAL\",\n        \"fx\": \"USD_NEUTRAL\",\n        \"commodities\": \"POSITIVE\"\n    },\n    \"key_factors\": [\n        \"Fed signaling 2 cuts in 2024\",\n        \"CPI moderating but still elevated\",\n        \"Labor market resilient\",\n        \"China stimulus hopes\"\n    ],\n    \"confidence\": 0.72\n}\n\nreturn macro_regime"
+      },
+      "name": "Macro Regime",
+      "type": "n8n-nodes-base.python",
+      "position": [1320, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Compile morning briefing\nconst calendar = $input.first().json.calendar;\nconst analyses = $input.first().json.analyses;\nconst account = $input.first().json.account;\nconst schedule = $input.first().json.kill_zone_schedule;\nconst macro = $input.first().json;\n\nlet briefing = `📊 **MORNING INTELLIGENCE BRIEFING** 📊\n`;\nbriefing += `━━━━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n\nbriefing += `🗓️ **TODAY'S CALENDAR**\\n`;\ncalendar.forEach(e => {\n  briefing += `${e.time} ${e.currency} ${e.event} [${e.impact}]\\n`;\n});\nbriefing += `\\n`;\n\nbriefing += `📈 **Overnight SMC Setups**\\n`;\nObject.entries(analyses).forEach(([sym, a]) => {\n  briefing += `${sym}: ${a.bias} | ${a.setups.length} setups\\n`;\n});\nbriefing += `\\n`;\n\nbriefing += `💼 **Portfolio Status**\\n`;\nbriefing += `Balance: $${account.balance.toFixed(2)}\\n`;\nbriefing += `Daily P&L: $${account.daily_pnl.toFixed(2)}\\n`;\nbriefing += `Open Positions: ${account.open_positions}\\n\\n`;\n\nbriefing += `⏰ **Kill Zone Schedule**\\n`;\nschedule.forEach(s => {\n  briefing += `${s.time} ${s.session}\\n`;\n});\nbriefing += `\\n`;\n\nbriefing += `🌍 **Macro Regime**: ${macro.regime}\\n`;\nbriefing += `Confidence: ${(macro.confidence * 100).toFixed(0)}%\\n\\n`;\n\nbriefing += `━━━━━━━━━━━━━━━━━━━━━━━\\n`;\nbriefing += `Good luck trading! 🎯`;\n\nreturn { briefing, chatId: '-100123456789' };"
+      },
+      "name": "Compile Briefing",
+      "type": "n8n-nodes-base.function",
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.briefing }}"
+      },
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegramSender",
+      "position": [1760, 0]
+    }
+  ],
+  "connections": {
+    "Daily 06:00 UTC": {
+      "main": [[{"node": "Economic Calendar", "type": "main", "index": 0}]]
+    },
+    "Economic Calendar": {
+      "main": [[{"node": "Overnight SMC Analysis", "type": "main", "index": 0}]]
+    },
+    "Overnight SMC Analysis": {
+      "main": [[{"node": "COT Report Check", "type": "main", "index": 0}]]
+    },
+    "COT Report Check": {
+      "main": [[{"node": "Active Positions", "type": "main", "index": 0}]]
+    },
+    "Active Positions": {
+      "main": [[{"node": "Kill Zone Schedule", "type": "main", "index": 0}]]
+    },
+    "Kill Zone Schedule": {
+      "main": [[{"node": "Macro Regime", "type": "main", "index": 0}]]
+    },
+    "Macro Regime": {
+      "main": [[{"node": "Compile Briefing", "type": "main", "index": 0}]]
+    },
+    "Compile Briefing": {
+      "main": [[{"node": "Send to Telegram", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["agentfinance", "morning-briefing", "automation"],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "versionId": "1"
+}

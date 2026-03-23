@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - Funding Tracker Agent (08)
+# Department: Private Markets Intelligence
+
+agent:
+  name: Funding Tracker Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/funding_tracker.py
+  skills:
+    - funding-round-tracker
+    - valuation-analysis
+    - investor-tracking
+    - deal-sourcing
+  budget: $10/month
+  triggers:
+    - webhook: /funding/new
+    - cron: "0 10 * * 1-5"  # Morning check
+
+commands:
+  - name: /funding:recent
+    description: Recent funding rounds
+    syntax: /funding:recent [DAYS=7]
+  - name: /funding:round
+    description: Funding round details
+    syntax: /funding:round <COMPANY>
+  - name: /funding:top-rounds
+    description: Largest recent rounds
+    syntax: /funding:top-rounds [SECTOR]
+  - name: /funding:trend
+    description: Funding trends by sector
+    syntax: /funding:trend <SECTOR>

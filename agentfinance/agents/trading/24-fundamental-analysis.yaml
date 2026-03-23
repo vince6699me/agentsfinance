@@ -1,0 +1,57 @@
+# Agent Configuration
+# AgentFinance v3 - Fundamental Analysis Agent (24)
+# Department: Trading Strategy Engine
+
+agent:
+  name: Fundamental Analysis Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/fundamental_analysis.py
+  skills:
+    - fundamental-regime
+    - fundamental-calendar
+    - fundamental-rates
+    - fundamental-inflation
+    - fundamental-growth
+  budget: $18/month
+  triggers:
+    - webhook: /macro/update
+    - cron: "0 7 * * 1-5"  # Pre-market daily
+
+commands:
+  - name: /macro:regime
+    description: Current macro regime
+    syntax: /macro:regime
+  - name: /macro:calendar
+    description: Economic calendar today
+    syntax: /macro:calendar
+  - name: /macro:rates
+    description: Central bank rates
+    syntax: /macro:rates
+  - name: /macro:inflation
+    description: Inflation data
+    syntax: /macro:inflation [US|EU|UK|JP|CN]
+  - name: /macro:gdp
+    description: GDP analysis
+    syntax: /macro:gdp [COUNTRY]
+  - name: /macro:nfp
+    description: Employment report
+    syntax: /macro:nfp
+  - name: /macro:cpi
+    description: CPI breakdown
+    syntax: /macro:cpi
+  - name: /macro:fed
+    description: Fed policy analysis
+    syntax: /macro:fed
+  - name: /macro:global
+    description: Global macro snapshot
+    syntax: /macro:global
+  - name: /macro:surprise
+    description: Recent data surprises
+    syntax: /macro:surprise <EVENT>
+  - name: /macro:bias
+    description: Macro directional bias
+    syntax: /macro:bias
+  - name: /macro:report
+    description: Weekly macro report
+    syntax: /macro:report

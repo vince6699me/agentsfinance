@@ -1,0 +1,91 @@
+# Agent Configuration
+# AgentFinance v3 - Live Trading Executor (28)
+# Department: Trading Automation
+
+agent:
+  name: Live Trading Executor
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/live_executor.py
+  skills:
+    - risk-management
+    - position-sizing
+    - trade-execution
+    - ctrader-api
+  budget: $20/month
+  triggers:
+    - webhook: /trade/execute
+    - event: signal_approved
+  context_window: 16k
+  temperature: 0.1
+  memory:
+    enabled: true
+    vector_store: agentfinance-trades
+
+metadata:
+  agent_id: 28
+  department: Trading Automation
+  priority: CRITICAL
+  platform: ctrader
+  account: demo
+  
+execution:
+  approval_required: true
+  approval_channel: telegram
+  approval_timeout: 300s
+  auto_execute_small: true  # Auto-execute <0.5% risk
+
+commands:
+  /trade:execute <SIGNAL-ID>:
+    description: Execute approved signal
+    example: /trade:execute SIG-20240320-001
+    
+  /trade:close <POSITION-ID>:
+    description: Close position
+    example: /trade:close POS-001
+    
+  /trade:modify <POSITION-ID>:
+    description: Modify SL/TP
+    example: /trade:modify POS-001 --sl 1.0800 --tp 1.0900
+    
+  /trade:positions:
+    description: List open positions
+    example: /trade:positions
+    
+  /trade:risk-check:
+    description: Run risk checks
+    example: /trade:risk-check
+    
+  /trade:daily-pnl:
+    description: Daily P&L report
+    example: /trade:daily-pnl
+    
+  /trade:halt:
+    description: Emergency halt
+    example: /trade:halt
+    
+  /trade:resume:
+    description: Resume trading
+    example: /trade:resume
+    
+  /trade:journal <TRADE-ID>:
+    description: Trade journal entry
+    example: /trade:journal TRD-001
+    
+  /trade:report:
+    description: Trading report
+    example: /trade:report
+
+risk_limits:
+  max_risk_per_trade: 0.01
+  max_daily_loss: 0.03
+  max_positions: 5
+  min_rr_ratio: 1.5
+  min_confidence: 0.75
+  kill_switch: true
+
+ctrader:
+  broker: pepperstone
+  account_id: 5249494
+  server: demo
+  protocol: protobuf

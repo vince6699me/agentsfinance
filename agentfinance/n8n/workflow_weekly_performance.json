@@ -1,0 +1,232 @@
+{
+  "name": "AgentFinance - Weekly Performance Review",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "cronExpression", "expression": "0 18 * * 0"}]}
+      },
+      "name": "Sunday 18:00 UTC Weekly Cron",
+      "type": "n8n-nodes-base.cron",
+      "position": [0, 0],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/trade_journal",
+        "queryParameters": {
+          "parameters": [
+            {"name": "status", "value": "eq.CLOSED"},
+            {"name": "timestamp", "value": "gte.{{ $dateInterval(-7, 'days').toISOString() }}"}
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "{{ $env.SUPABASE_KEY }}"},
+            {"name": "Authorization", "value": "Bearer {{ $env.SUPABASE_KEY }}"},
+            {"name": "Prefer", "value": "count=exact"}
+          ]
+        }
+      },
+      "name": "Pull Closed Trades from Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/account/summary",
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"}
+          ]
+        }
+      },
+      "name": "Fetch Account Summary from cTrader",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Calculate comprehensive weekly performance metrics\nconst trades = $input.first().json.trades || [];\nconst account = $input.item(1).json;\n\nif (trades.length === 0) {\n  return {\n    json: {\n      hasTrades: false,\n      totalTrades: 0,\n      message: 'No trades closed this week. Weekly report skipped.'\n    }\n  };\n}\n\n// Basic stats\nconst totalTrades = trades.length;\nconst winningTrades = trades.filter(t => t.pnl_pips > 0);\nconst losingTrades = trades.filter(t => t.pnl_pips <= 0);\nconst winRate = (winningTrades.length / totalTrades * 100).toFixed(1);\n\nconst totalPips = trades.reduce((s, t) => s + (t.pnl_pips || 0), 0);\nconst totalPnl = trades.reduce((s, t) => s + (t.pnl_amount || 0), 0);\n\nconst avgWin = winningTrades.length > 0 \n  ? winningTrades.reduce((s, t) => s + t.pnl_pips, 0) / winningTrades.length \n  : 0;\nconst avgLoss = losingTrades.length > 0 \n  ? Math.abs(losingTrades.reduce((s, t) => s + t.pnl_pips, 0) / losingTrades.length) \n  : 0;\nconst profitFactor = avgLoss > 0 ? (avgWin / avgLoss).toFixed(2) : '∞';\n\nconst bestTrade = trades.reduce((best, t) => t.pnl_pips > (best?.pnl_pips || -Infinity) ? t : best, null);\nconst worstTrade = trades.reduce((worst, t) => t.pnl_pips < (worst?.pnl_pips || Infinity) ? t : worst, null);\n\nconst longestTrade = trades.reduce((longest, t) => (t.trade_age_minutes || 0) > (longest?.trade_age_minutes || 0) ? t : longest, null);\nconst shortestTrade = trades.reduce((shortest, t) => (t.trade_age_minutes || Infinity) < (shortest?.trade_age_minutes || Infinity) ? t : shortest, null);\n\n// Strategy breakdown\nconst byStrategy = {};\ntrades.forEach(t => {\n  const strat = t.label?.split('-')[0] || 'Unknown';\n  if (!byStrategy[strat]) byStrategy[strat] = { wins: 0, losses: 0, pips: 0, trades: 0 };\n  byStrategy[strat].trades++;\n  byStrategy[strat].pips += t.pnl_pips || 0;\n  if (t.pnl_pips > 0) byStrategy[strat].wins++;\n  else byStrategy[strat].losses++;\n});\n\n// Session analysis\nconst bySession = {\n  'Asian': { pips: 0, trades: 0, wins: 0 },\n  'London': { pips: 0, trades: 0, wins: 0 },\n  'NY': { pips: 0, trades: 0, wins: 0 },\n  'Other': { pips: 0, trades: 0, wins: 0 }\n};\n\n// Symbol analysis\nconst bySymbol = {};\ntrades.forEach(t => {\n  const sym = t.symbol;\n  if (!bySymbol[sym]) bySymbol[sym] = { pips: 0, trades: 0, wins: 0 };\n  bySymbol[sym].trades++;\n  bySymbol[sym].pips += t.pnl_pips || 0;\n  if (t.pnl_pips > 0) bySymbol[sym].wins++;\n});\n\n// Day of week analysis\nconst byDay = {\n  'Monday': { pips: 0, trades: 0, wins: 0 },\n  'Tuesday': { pips: 0, trades: 0, wins: 0 },\n  'Wednesday': { pips: 0, trades: 0, wins: 0 },\n  'Thursday': { pips: 0, trades: 0, wins: 0 },\n  'Friday': { pips: 0, trades: 0, wins: 0 },\n  'Saturday': { pips: 0, trades: 0, wins: 0 },\n  'Sunday': { pips: 0, trades: 0, wins: 0 }\n};\n\ntrades.forEach(t => {\n  if (t.timestamp) {\n    const day = new Date(t.timestamp).toLocaleDateString('en-US', { weekday: 'long' });\n    if (byDay[day]) {\n      byDay[day].trades++;\n      byDay[day].pips += t.pnl_pips || 0;\n      if (t.pnl_pips > 0) byDay[day].wins++;\n    }\n  }\n});\n\n// Calculate Sharpe-like metric (simplified)\nconst returns = trades.map(t => t.pnl_amount / 10000); // normalize to account size\nconst avgReturn = returns.reduce((s,r) => s+r, 0) / returns.length;\nconst variance = returns.reduce((s,r) => s + Math.pow(r - avgReturn, 2), 0) / returns.length;\nconst stdDev = Math.sqrt(variance);\nconst sharpeWeekly = stdDev > 0 ? (avgReturn / stdDev * Math.sqrt(52)).toFixed(2) : '∞';\n\n// Account metrics\nconst weeklyReturn = account.balance > 0 ? ((account.equity - account.balance) / account.balance * 100).toFixed(2) : '0';\nconst monthlyReturn = account.equity > 10000 ? ((account.equity - 10000) / 10000 * 100).toFixed(2) : '0';\n\nreturn {\n  json: {\n    hasTrades: true,\n    // Period\n    periodStart: trades.length > 0 ? trades[trades.length-1].timestamp : null,\n    periodEnd: trades.length > 0 ? trades[0].timestamp : null,\n    \n    // Core metrics\n    totalTrades,\n    winningTrades: winningTrades.length,\n    losingTrades: losingTrades.length,\n    winRate,\n    totalPips: totalPips.toFixed(1),\n    totalPnl: totalPnl.toFixed(2),\n    avgWin: avgWin.toFixed(1),\n    avgLoss: avgLoss.toFixed(1),\n    profitFactor,\n    sharpeWeekly,\n    \n    // Extremes\n    bestTrade: bestTrade ? { symbol: bestTrade.symbol, pips: bestTrade.pnl_pips, direction: bestTrade.direction } : null,\n    worstTrade: worstTrade ? { symbol: worstTrade.symbol, pips: worstTrade.pnl_pips, direction: worstTrade.direction } : null,\n    longestTrade: longestTrade ? { symbol: longestTrade.symbol, minutes: longestTrade.trade_age_minutes } : null,\n    shortestTrade: shortestTrade ? { symbol: shortestTrade.symbol, minutes: shortestTrade.trade_age_minutes } : null,\n    \n    // Breakdowns\n    byStrategy,\n    bySession,\n    bySymbol,\n    byDay,\n    \n    // Account\n    accountEquity: account.equity,\n    accountBalance: account.balance,\n    weeklyReturn,\n    monthlyReturn,\n    marginLevel: account.marginLevel,\n    \n    // Trade data\n    trades: trades.slice(0, 10), // top 10 for detail\n    \n    generatedAt: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Calculate Performance Metrics",
+      "type": "n8n-nodes-base.function",
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Generate comprehensive weekly report\nconst metrics = $input.first().json;\n\nif (!metrics.hasTrades) {\n  return {\n    json: {\n      reportType: 'empty',\n      message: metrics.message\n    }\n  };\n}\n\n// Best and worst strategy\nconst strategyEntries = Object.entries(metrics.byStrategy)\n  .map(([name, data]) => ({ name, ...data, wr: (data.wins / data.trades * 100).toFixed(0) }))\n  .sort((a, b) => b.pips - a.pips);\n\nconst bestStrategy = strategyEntries[0];\nconst worstStrategy = strategyEntries[strategyEntries.length - 1];\n\n// Best and worst session\nconst sessionEntries = Object.entries(metrics.bySession)\n  .map(([name, data]) => ({ name, ...data, wr: data.trades > 0 ? (data.wins / data.trades * 100).toFixed(0) : 0 }))\n  .filter(s => s.trades > 0)\n  .sort((a, b) => b.pips - a.pips);\n\nconst bestSession = sessionEntries[0];\n\n// Best and worst day\nconst dayEntries = Object.entries(metrics.byDay)\n  .map(([name, data]) => ({ name, ...data, wr: data.trades > 0 ? (data.wins / data.trades * 100).toFixed(0) : 0 }))\n  .filter(d => d.trades > 0)\n  .sort((a, b) => b.pips - a.pips);\n\nconst bestDay = dayEntries[0];\nconst worstDay = dayEntries[dayEntries.length - 1];\n\n// Top symbol\nconst symbolEntries = Object.entries(metrics.bySymbol)\n  .map(([name, data]) => ({ name, ...data, wr: (data.wins / data.trades * 100).toFixed(0) }))\n  .sort((a, b) => b.pips - a.pips);\n\nconst topSymbol = symbolEntries[0];\n\n// Generate recommendations\nconst recommendations = [];\n\nif (metrics.winRate < 55) {\n  recommendations.push('Consider reviewing entry criteria — win rate below 55%');\n}\nif (metrics.profitFactor < 1.5) {\n  recommendations.push('Profit factor below 1.5 — improve R:R or entry timing');\n}\nif (worstStrategy && worstStrategy.pips < -20) {\n  recommendations.push(`Reduce ${worstStrategy.name} strategy allocation — ${worstStrategy.pips.toFixed(0)} pips this week`);\n}\nif (bestSession && bestSession.name === 'Asian') {\n  recommendations.push('Asian session performing well — consider increasing allocation');\n}\nif (bestDay && bestDay.name === 'Friday') {\n  recommendations.push('Friday showing positive results — maintain current Friday exposure');\n}\nif (metrics.totalTrades < 10) {\n  recommendations.push('Low trade count this week — ensure enough quality setups forming');\n}\nif (bestStrategy) {\n  recommendations.push(`Focus on ${bestStrategy.name} setups — best performer this week`);\n}\n\n// Strategy table\nconst strategyTable = strategyEntries.map(s => \n  `| ${s.name} | ${s.trades} | ${s.pips >= 0 ? '+' : ''}${s.pips.toFixed(0)} | ${s.wr}% |`\n).join('\\n');\n\n// Session table\nconst sessionTable = sessionEntries.map(s => \n  `| ${s.name} | ${s.trades} | ${s.pips >= 0 ? '+' : ''}${s.pips.toFixed(0)} | ${s.wr}% |`\n).join('\\n');\n\n// Day table\nconst dayTable = dayEntries.map(d => \n  `| ${d.name} | ${d.trades} | ${d.pips >= 0 ? '+' : ''}${d.pips.toFixed(0)} | ${d.wr}% |`\n).join('\\n');\n\nreturn {\n  json: {\n    reportType: 'full',\n    \n    // Summary\n    summary: {\n      totalTrades: metrics.totalTrades,\n      winRate: metrics.winRate,\n      totalPips: metrics.totalPips,\n      totalPnl: metrics.totalPnl,\n      profitFactor: metrics.profitFactor,\n      sharpeWeekly: metrics.sharpeWeekly,\n      weeklyReturn: metrics.weeklyReturn,\n    },\n    \n    // Highlights\n    bestTrade: metrics.bestTrade,\n    worstTrade: metrics.worstTrade,\n    longestTrade: metrics.longestTrade,\n    \n    // Rankings\n    bestStrategy,\n    worstStrategy,\n    bestSession,\n    bestDay,\n    worstDay,\n    topSymbol,\n    \n    // Tables\n    strategyTable,\n    sessionTable,\n    dayTable,\n    \n    // Recommendations\n    recommendations,\n    \n    // Account\n    accountEquity: metrics.accountEquity,\n    accountBalance: metrics.accountBalance,\n    marginLevel: metrics.marginLevel,\n    \n    // Meta\n    periodStart: metrics.periodStart,\n    periodEnd: metrics.periodEnd,\n    generatedAt: metrics.generatedAt,\n    \n    // Raw for Notion\n    rawMetrics: metrics\n  }\n};"
+      },
+      "name": "Generate Weekly Report",
+      "type": "n8n-nodes-base.function",
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "=📊 *Weekly Trading Report*\\n\\n*Week:* {{ $json.periodStart?.substring(0,10) }} → {{ $json.periodEnd?.substring(0,10) }}\\n\\n*📈 Core Metrics*\\n• Total Trades: *{{ $json.summary.totalTrades }}*\\n• Win Rate: *{{ $json.summary.winRate }}%*\\n• Total P&L: *{{ $json.summary.totalPnl }} pips ({{ $json.summary.totalPnl >= 0 ? '+' : '' }}${{ (parseFloat($json.summary.totalPnl) * 10).toFixed(2) }})*\\n• Profit Factor: *{{ $json.summary.profitFactor }}*\\n• Sharpe Ratio: *{{ $json.summary.sharpeWeekly }}*\\n• Weekly Return: *{{ $json.summary.weeklyReturn }}%*\\n\\n*🏆 Highlights*\\n• Best Trade: {{ $json.bestTrade?.symbol }} {{ $json.bestTrade?.direction }} +{{ $json.bestTrade?.pips }} pips\\n• Worst Trade: {{ $json.worstTrade?.symbol }} {{ $json.worstTrade?.direction }} {{ $json.worstTrade?.pips }} pips\\n• Top Strategy: {{ $json.bestStrategy?.name }} ({{ $json.bestStrategy?.pips >= 0 ? '+' : '' }}{{ $json.bestStrategy?.pips?.toFixed(0) }} pips)\\n• Best Session: {{ $json.bestSession?.name || 'N/A' }}\\n• Best Day: {{ $json.bestDay?.name || 'N/A' }}\\n\\n*📋 Recommendations*\\n{{ $json.recommendations?.map((r,i) => `${i+1}. ${r}`).join('\\n') || 'None this week' }}\\n\\n🕐 Generated: {{ $json.generatedAt }}"
+      },
+      "name": "Telegram Weekly Report",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1100, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.NOTION_API_URL }}/v1/pages",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "parent_database_id", "value": "{{ $env.NOTION_WEEKLY_DB_ID }}"},
+            {"name": "properties", "value": "={{ JSON.stringify({\n              'Week': { 'title': [{ 'text': { 'content': new Date().toISOString().substring(0, 10) } }] },\n              'Total Trades': { 'number': $json.summary.totalTrades },\n              'Win Rate': { 'number': parseFloat($json.summary.winRate) },\n              'Total Pips': { 'number': parseFloat($json.summary.totalPips) },\n              'Profit Factor': { 'number': parseFloat($json.summary.profitFactor) || 0 },\n              'Weekly Return': { 'number': parseFloat($json.summary.weeklyReturn) || 0 },\n              'Best Strategy': { 'select': { 'name': $json.bestStrategy?.name || 'Unknown' } },\n              'Best Session': { 'select': { 'name': $json.bestSession?.name || 'Unknown' } },\n              'Status': { 'select': { 'name': parseFloat($json.summary.totalPips) >= 0 ? 'Profitable' : 'Losing' } }\n            }) }}"}
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.NOTION_TOKEN }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Notion-Version", "value": "2022-06-28"}
+          ]
+        }
+      },
+      "name": "Save to Notion Journal",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1100, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/weekly_reports",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "week_start", "value": "={{ $json.periodStart?.substring(0, 10) }}"},
+            {"name": "week_end", "value": "={{ $json.periodEnd?.substring(0, 10) }}"},
+            {"name": "total_trades", "value": "={{ $json.summary.totalTrades }}"},
+            {"name": "winning_trades", "value": "={{ Math.round($json.summary.totalTrades * parseFloat($json.summary.winRate) / 100) }}"},
+            {"name": "win_rate", "value": "={{ parseFloat($json.summary.winRate) }}"},
+            {"name": "total_pips", "value": "={{ parseFloat($json.summary.totalPips) }}"},
+            {"name": "total_pnl", "value": "={{ parseFloat($json.summary.totalPnl) }}"},
+            {"name": "profit_factor", "value": "={{ parseFloat($json.summary.profitFactor) || 0 }}"},
+            {"name": "sharpe_ratio", "value": "={{ parseFloat($json.summary.sharpeWeekly) || 0 }}"},
+            {"name": "weekly_return", "value": "={{ parseFloat($json.summary.weeklyReturn) || 0 }}"},
+            {"name": "best_strategy", "value": "={{ $json.bestStrategy?.name }}"},
+            {"name": "best_session", "value": "={{ $json.bestSession?.name }}"},
+            {"name": "best_day", "value": "={{ $json.bestDay?.name }}"},
+            {"name": "recommendations", "value": "={{ JSON.stringify($json.recommendations || []) }}"},
+            {"name": "strategy_breakdown", "value": "={{ JSON.stringify($json.rawMetrics?.byStrategy || {}) }}"},
+            {"name": "session_breakdown", "value": "={{ JSON.stringify($json.rawMetrics?.bySession || {}) }}"},
+            {"name": "day_breakdown", "value": "={{ JSON.stringify($json.rawMetrics?.byDay || {}) }}"},
+            {"name": "account_equity", "value": "={{ $json.accountEquity }}"},
+            {"name": "account_balance", "value": "={{ $json.accountBalance }}"},
+            {"name": "generated_at", "value": "={{ $json.generatedAt }}"}
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "{{ $env.SUPABASE_KEY }}"},
+            {"name": "Authorization", "value": "Bearer {{ $env.SUPABASE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        }
+      },
+      "name": "Save Report to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "has-trades",
+              "leftValue": "={{ $json.hasTrades }}",
+              "rightValue": true,
+              "operator": {"type": "boolean", "operation": "equals"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Has Trades?",
+      "type": "n8n-nodes-base.if",
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "📊 *Weekly Trading Report*\\n\\nNo trades closed this week ({{ $json.periodStart?.substring(0,10) }} → {{ $json.periodEnd?.substring(0,10) }}).\\n\\n💡 Consider reviewing setup quality and market conditions for the upcoming week."
+      },
+      "name": "Telegram Empty Report",
+      "type": "n8n-nodes-base.telegram",
+      "position": [880, 200]
+    }
+  ],
+  "connections": {
+    "Sunday 18:00 UTC Weekly Cron": {
+      "main": [[{"node": "Pull Closed Trades from Supabase", "type": "main", "index": 0}]]
+    },
+    "Pull Closed Trades from Supabase": {
+      "main": [[{"node": "Fetch Account Summary from cTrader", "type": "main", "index": 0}]]
+    },
+    "Fetch Account Summary from cTrader": {
+      "main": [[{"node": "Calculate Performance Metrics", "type": "main", "index": 0}]]
+    },
+    "Calculate Performance Metrics": {
+      "main": [[{"node": "Has Trades?", "type": "main", "index": 0}]]
+    },
+    "Has Trades?": {
+      "main": [
+        [{"node": "Generate Weekly Report", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Telegram Empty Report", "type": "main", "index": 0}]
+      ]
+    },
+    "Generate Weekly Report": {
+      "main": [
+        [{"node": "Telegram Weekly Report", "type": "main", "index": 0}],
+        [{"node": "Save to Notion Journal", "type": "main", "index": 0}],
+        [{"node": "Save Report to Supabase", "type": "main", "index": 0}]
+      ]
+    },
+    "Telegram Weekly Report": {
+      "main": [[]]
+    },
+    "Save to Notion Journal": {
+      "main": [[]]
+    },
+    "Save Report to Supabase": {
+      "main": [[]]
+    },
+    "Telegram Empty Report": {
+      "main": [[]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "UTC"
+  },
+  "tags": ["trading", "performance", "analytics", "automation", "weekly"],
+  "description": "Weekly performance review — calculates metrics, strategy/session/day breakdowns, generates recommendations, saves to Supabase and Notion",
+  "active": true
+}

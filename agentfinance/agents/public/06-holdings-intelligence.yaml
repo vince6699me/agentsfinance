@@ -1,0 +1,35 @@
+# Agent Configuration
+# AgentFinance v3 - Holdings Intelligence Agent (06)
+# Department: Public Markets Intelligence
+
+agent:
+  name: Holdings Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/holdings_intelligence.py
+  skills:
+    - institutional-holdings
+    - 13f-analysis
+    - etf-holdings
+    - ownership-changes
+  budget: $10/month
+  triggers:
+    - webhook: /holdings/update
+    - cron: "0 18 * * 0"  # Weekly (Sunday)
+
+commands:
+  - name: /holdings:top-owners
+    description: Top institutional owners
+    syntax: /holdings:top-owners <TICKER>
+  - name: /holdings:13f
+    description: Latest 13F filing changes
+    syntax: /holdings:13f <TICKER>
+  - name: /holdings:etf-holders
+    description: ETF holders of stock
+    syntax: /holdings:etf-holders <TICKER>
+  - name: /holdings:changes
+    description: Recent ownership changes
+    syntax: /holdings:changes <TICKER>
+  - name: /holdings:smart-money
+    description: Track institutional buying
+    syntax: /holdings:smart-money <TICKER>

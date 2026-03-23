@@ -1,0 +1,49 @@
+# Agent Configuration
+# AgentFinance v3 - Sentiment Intelligence Agent (25)
+# Department: Trading Strategy Engine
+
+agent:
+  name: Sentiment Intelligence Agent
+  model: mistral:7b  # Fast, lightweight - sentiment scoring doesn't need large models
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/sentiment_intelligence.py
+  skills:
+    - sentiment-cot
+    - sentiment-fear-greed
+    - sentiment-options-flow
+    - sentiment-social
+    - sentiment-retail
+    - sentiment-composite
+  budget: $18/month
+  triggers:
+    - webhook: /sentiment/update
+    - cron: "0 */2 * * 1-5"  # Every 2 hours
+
+commands:
+  - name: /sentiment:cot
+    description: COT positioning
+    syntax: /sentiment:cot <SYMBOL>
+  - name: /sentiment:fear-greed
+    description: Fear & Greed Index
+    syntax: /sentiment:fear-greed
+  - name: /sentiment:options
+    description: Options flow analysis
+    syntax: /sentiment:options <SYMBOL>
+  - name: /sentiment:social
+    description: Social media sentiment
+    syntax: /sentiment:social <SYMBOL>
+  - name: /sentiment:retail
+    description: Retail positioning (SSI)
+    syntax: /sentiment:retail <SYMBOL>
+  - name: /sentiment:composite
+    description: Composite sentiment score
+    syntax: /sentiment:composite <SYMBOL>
+  - name: /sentiment:extremes
+    description: Extreme sentiment signals
+    syntax: /sentiment:extremes
+  - name: /sentiment:divergence
+    description: Sentiment vs price divergence
+    syntax: /sentiment:divergence <SYMBOL>
+  - name: /sentiment:report
+    description: Daily sentiment briefing
+    syntax: /sentiment:report

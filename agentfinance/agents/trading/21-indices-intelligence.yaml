@@ -1,0 +1,48 @@
+# Agent Configuration
+# AgentFinance v3 - Indices Intelligence Agent (21)
+# Department: Asset Class Intelligence
+
+agent:
+  name: Indices Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/indices_intelligence.py
+  skills:
+    - indices-smc
+    - indices-breadth
+    - indices-vix-regime
+    - indices-sector-rotation
+    - indices-internals
+    - indices-intermarket
+    - indices-skew
+    - indices-advance-decline
+  budget: $20/month
+  triggers:
+    - cron: "*/15 * * * 1-5"
+    - webhook: /indices/signal
+
+commands:
+  - name: /index:spx
+    description: S&P 500 analysis
+    syntax: /index:spx
+  - name: /index:breadth
+    description: Market breadth analysis
+    syntax: /index:breadth
+  - name: /index:vix
+    description: VIX regime analysis
+    syntax: /index:vix
+  - name: /index:sectors
+    description: Sector rotation analysis
+    syntax: /index:sectors
+  - name: /index:regime
+    description: Risk-on/risk-off regime
+    syntax: /index:regime
+  - name: /index:global
+    description: Global indices comparison
+    syntax: /index:global
+  - name: /index:setup
+    description: Index trade setup
+    syntax: /index:setup <SYMBOL>
+  - name: /index:report
+    description: Daily indices briefing
+    syntax: /index:report

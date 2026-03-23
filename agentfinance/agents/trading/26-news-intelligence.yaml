@@ -1,0 +1,48 @@
+# Agent Configuration
+# AgentFinance v3 - News Intelligence Agent (26)
+# Department: Trading Strategy Engine
+
+agent:
+  name: News Intelligence Agent
+  model: mistral:7b  # Fast, lightweight - news summarization doesn't need large models
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/news_intelligence.py
+  skills:
+    - news-nlp
+    - news-events
+    - news-breaking
+    - news-sentiment
+    - news-calendar
+  budget: $15/month
+  triggers:
+    - webhook: /news/breaking
+    - cron: "*/30 * * * 1-5"  # Every 30 min
+
+commands:
+  - name: /news:scan
+    description: Scan latest financial news
+    syntax: /news:scan
+  - name: /news:symbol
+    description: News for specific ticker
+    syntax: /news:symbol <TICKER>
+  - name: /news:macro
+    description: Macro news headlines
+    syntax: /news:macro
+  - name: /news:sentiment
+    description: Sentiment analysis on topic
+    syntax: /news:sentiment <TOPIC>
+  - name: /news:calendar
+    description: News event calendar
+    syntax: /news:calendar
+  - name: /news:alerts
+    description: Active news alerts
+    syntax: /news:alerts
+  - name: /news:breaking
+    description: Breaking news
+    syntax: /news:breaking
+  - name: /news:geopolitical
+    description: Geopolitical risk news
+    syntax: /news:geopolitical
+  - name: /news:report
+    description: Daily news briefing
+    syntax: /news:report

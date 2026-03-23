@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - Investment Reporting Agent (16)
+# Department: Investment Operations
+
+agent:
+  name: Investment Reporting Agent
+  model: llama3.1:70b  # Upgraded: needs long context for report generation
+  adapter: python
+  script: /home/agent/agentfinance/agents/ops/investment_reporting.py
+  skills:
+    - report-generation
+    - performance-reporting
+    - trade-journal
+    - benchmark-comparison
+  budget: $10/month
+  triggers:
+    - webhook: /reports/generate
+    - cron: "0 18 * * 5"  # Weekly Friday
+
+commands:
+  - name: /report:weekly
+    description: Weekly performance report
+    syntax: /report:weekly
+  - name: /report:trade-journal
+    description: Trade journal entry
+    syntax: /report:trade-journal <TRADE-ID>
+  - name: /report:benchmark
+    description: Benchmark comparison
+    syntax: /report:benchmark [INDEX]
+  - name: /report:summary
+    description: Executive summary
+    syntax: /report:summary

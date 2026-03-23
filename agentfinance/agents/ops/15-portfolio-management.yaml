@@ -1,0 +1,35 @@
+# Agent Configuration
+# AgentFinance v3 - Portfolio Management Agent (15)
+# Department: Investment Operations
+
+agent:
+  name: Portfolio Management Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/ops/portfolio_management.py
+  skills:
+    - portfolio-tracking
+    - allocation-analysis
+    - rebalancing
+    - risk-reporting
+  budget: $12/month
+  triggers:
+    - webhook: /portfolio/update
+    - cron: "0 17 * * 1-5"  # End of trading day
+
+commands:
+  - name: /portfolio:overview
+    description: Full portfolio summary
+    syntax: /portfolio:overview
+  - name: /portfolio:allocation
+    description: Asset allocation breakdown
+    syntax: /portfolio:allocation
+  - name: /portfolio:performance
+    description: Performance metrics
+    syntax: /portfolio:performance [PERIOD]
+  - name: /portfolio:rebalance
+    description: Rebalancing recommendations
+    syntax: /portfolio:rebalance
+  - name: /portfolio:risk
+    description: Portfolio risk metrics
+    syntax: /portfolio:risk

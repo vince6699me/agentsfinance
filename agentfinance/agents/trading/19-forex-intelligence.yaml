@@ -1,0 +1,89 @@
+# Agent Configuration
+# AgentFinance v3 - Forex Intelligence Agent (19)
+# Department: Asset Class Intelligence
+
+agent:
+  name: Forex Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/forex_intelligence.py
+  skills:
+    - forex-smc-analysis
+    - forex-cot-report
+    - forex-kill-zones
+    - forex-central-bank-policy
+    - forex-correlation-matrix
+    - forex-session-pairs
+    - forex-liquidity-map
+    - forex-retail-sentiment
+    - forex-carry-trade
+  budget: $25/month
+  triggers:
+    - cron: "*/15 0-22 * * 1-5"  # Every 15 min during market hours
+    - webhook: /forex/analyze
+  context_window: 32k
+  temperature: 0.3
+  memory:
+    enabled: true
+    vector_store: agentfinance-forex
+
+metadata:
+  agent_id: 19
+  department: Asset Class Intelligence
+  priority: HIGH
+  asset_classes:
+    - forex
+  monitored_pairs:
+    majors: [EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, USDCAD, NZDUSD]
+    minors: [EURGBP, EURJPY, GBPJPY, AUDJPY, EURAUD, EURNZD]
+    exotics: [USDZAR, USDTRY, USDMXN, USDSEK, USDNOK]
+
+commands:
+  /fx:setup <PAIR>:
+    description: Generate trade setup for currency pair
+    example: /fx:setup EURUSD
+    
+  /fx:kill-zones:
+    description: Show active kill zones
+    example: /fx:kill-zones
+    
+  /fx:cot <PAIR>:
+    description: COT positioning analysis
+    example: /fx:cot EUR
+    
+  /fx:pairs <SESSION>:
+    description: Best pairs for session
+    example: /fx:pairs London
+    
+  /fx:divergence:
+    description: Central bank divergence scoring
+    example: /fx:divergence
+    
+  /fx:scan:
+    description: Scan all pairs for setups
+    example: /fx:scan
+    
+  /fx:structure <PAIR> <TF>:
+    description: SMC structure analysis
+    example: /fx:structure EURUSD H1
+    
+  /fx:report:
+    description: Generate daily FX report
+    example: /fx:report
+
+data_sources:
+  ohlcv:
+    provider: oanda
+    pairs: all_majors
+    timeframe: H1
+  cot:
+    provider: cftc
+    frequency: weekly
+  calendar:
+    provider: dailyfx
+    impact_filter: [HIGH, MEDIUM]
+
+execution:
+  timeout: 120s
+  retry_attempts: 3
+  cache_ttl: 900s  # 15 min cache

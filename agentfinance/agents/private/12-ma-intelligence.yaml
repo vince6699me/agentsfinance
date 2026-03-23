@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - M&A Intelligence Agent (12)
+# Department: Private Markets Intelligence
+
+agent:
+  name: M&A Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/ma_intelligence.py
+  skills:
+    - ma-tracking
+    - deal-valuation
+    - synergy-analysis
+    - regulatory-analysis
+  budget: $12/month
+  triggers:
+    - webhook: /ma/signal
+    - cron: "0 11 * * 1-5"
+
+commands:
+  - name: /ma:deals
+    description: Recent M&A deals
+    syntax: /ma:deals [SECTOR]
+  - name: /ma:targets
+    description: Find acquisition targets
+    syntax: /ma:targets <CRITERIA>
+  - name: /ma:valuation
+    description: M&A valuation multiples
+    syntax: /ma:valuation <SECTOR>
+  - name: /ma:rumors
+    description: M&A rumor mill
+    syntax: /ma:rumors <TICKER>

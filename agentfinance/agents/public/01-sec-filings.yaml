@@ -1,0 +1,41 @@
+# Agent Configuration
+# AgentFinance v3 - Sec Filings Intelligence Agent (01)
+# Department: Public Markets Intelligence
+
+agent:
+  name: SEC Filings Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/sec_filings.py
+  skills:
+    - sec-10k-analysis
+    - sec-8k-detection
+    - sec-form4-tracker
+    - earnings-surprise-ai
+  budget: $15/month
+  triggers:
+    - webhook: /filings/new
+    - cron: "0 14 * * 1-5"  # Daily at market open
+
+commands:
+  - name: /filings:search
+    description: Search SEC filings for a company
+    syntax: /filings:search <COMPANY_OR_TICKER>
+  - name: /filings:10k
+    description: Get latest 10-K annual report
+    syntax: /filings:10k <TICKER>
+  - name: /filings:8k
+    description: Get recent 8-K material events
+    syntax: /filings:8k <TICKER>
+  - name: /filings:form4
+    description: Track insider transactions
+    syntax: /filings:form4 <TICKER>
+  - name: /filings:earnings
+    description: Upcoming earnings calendar
+    syntax: /filings:earnings
+
+outputs:
+  - filings_list
+  - company_analysis
+  - earnings_dates
+  - insider_activity

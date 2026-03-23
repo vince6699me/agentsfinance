@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - Deal Flow Agent (10)
+# Department: Private Markets Intelligence
+
+agent:
+  name: Deal Flow Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/deal_flow.py
+  skills:
+    - deal-sourcing
+    - deal-screening
+    - term-sheet-analysis
+    - deal-intelligence
+  budget: $12/month
+  triggers:
+    - webhook: /deals/new
+    - cron: "0 9 * * 1-5"
+
+commands:
+  - name: /deals:active
+    description: Active deal flow
+    syntax: /deals:active [SECTOR]
+  - name: /deals:screen
+    description: Screen deals by criteria
+    syntax: /deals:screen criteria=<CRITERIA>
+  - name: /deals:terms
+    description: Analyze deal terms
+    syntax: /deals:terms <COMPANY>
+  - name: /deals:ma-activity
+    description: M&A activity in sector
+    syntax: /deals:ma-activity [SECTOR]

@@ -1,0 +1,411 @@
+{
+  "name": "AgentFinance - Position Management and Trailing Stops",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {"interval": [{"field": "cronExpression", "expression": "*/5 * * * *"}]}
+      },
+      "name": "Every 5 Minutes Cron",
+      "type": "n8n-nodes-base.cron",
+      "position": [0, 0],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if this is a weekday during market hours\nconst now = new Date();\nconst day = now.getUTCDay();\nconst hour = now.getUTCHours();\n\nconst isWeekday = day >= 1 && day <= 5;\nconst isMarketHours = hour >= 2 && hour < 22;\n\nif (isWeekday && isMarketHours) {\n  return [{}];\n}\nreturn [];"
+      },
+      "name": "Market Hours Gate",
+      "type": "n8n-nodes-base.function",
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/positions",
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        }
+      },
+      "name": "Fetch Open Positions from cTrader",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if there are open positions to manage\nconst positions = $input.first().json.positions || [];\n\nif (positions.length === 0) {\n  return []; // No positions to manage, stop workflow\n}\n\nreturn positions.map(p => ({\n  json: {\n    positionId: p.positionId,\n    symbol: p.symbol,\n    direction: p.direction,\n    volume: p.volume,\n    entryPrice: p.entryPrice,\n    currentPrice: p.currentPrice,\n    unrealizedPnL: p.unrealizedPnL,\n    unrealizedPnLPips: p.unrealizedPnLPips,\n    openTime: p.openTime,\n    stopLoss: p.stopLoss,\n    takeProfit1: p.takeProfit1,\n    takeProfit2: p.takeProfit2,\n    label: p.label,\n  }\n}));"
+      },
+      "name": "Parse Positions Data",
+      "type": "n8n-nodes-base.function",
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "pips-threshold",
+              "leftValue": "={{ $json.unrealizedPnLPips }}",
+              "rightValue": 30,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check TP1 Threshold (30 pips)",
+      "type": "n8n-nodes-base.if",
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "at-breakeven",
+              "leftValue": "={{ $json.stopLoss }}",
+              "rightValue": "={{ $json.entryPrice }}",
+              "operator": {"type": "string", "operation": "notEquals"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Already at Breakeven?",
+      "type": "n8n-nodes-base.if",
+      "position": [1100, -200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Move stop loss to breakeven + 5 pips when TP1 is hit\nconst position = $input.first().json;\nconst pipSize = position.symbol.includes('JPY') ? 0.01 : 0.0001;\nconst buffer = 5 * pipSize;\n\nlet newStopLoss;\nif (position.direction === 'BUY') {\n  newStopLoss = position.entryPrice + buffer;\n} else {\n  newStopLoss = position.entryPrice - buffer;\n}\n\nreturn {\n  json: {\n    positionId: position.positionId,\n    symbol: position.symbol,\n    action: 'MOVE_TO_BREAKEVEN',\n    oldStopLoss: position.stopLoss,\n    newStopLoss: newStopLoss,\n    direction: position.direction,\n    entryPrice: position.entryPrice,\n    unrealizedPnLPips: position.unrealizedPnLPips,\n    comment: `Trailing stop to BE+5 pips at ${position.unrealizedPnLPips.toFixed(1)} pips profit`\n  }\n};"
+      },
+      "name": "Calculate Breakeven Stop",
+      "type": "n8n-nodes-base.function",
+      "position": [1320, -200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/positions/{{ $json.positionId }}/modify",
+        "method": "PUT",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "stopLoss", "value": "={{ $json.newStopLoss }}"},
+            {"name": "comment", "value": "={{ $json.comment }}"}
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        }
+      },
+      "name": "Move SL to Breakeven via cTrader",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1540, -200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "tp2-threshold",
+              "leftValue": "={{ $json.unrealizedPnLPips }}",
+              "rightValue": 60,
+              "operator": {"type": "number", "operation": "gte"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check TP2 Threshold (60 pips)",
+      "type": "n8n-nodes-base.if",
+      "position": [880, 100]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Close remaining 50% of position at TP2\nconst position = $input.first().json;\nconst closeVolume = position.volume / 2;\n\nreturn {\n  json: {\n    positionId: position.positionId,\n    symbol: position.symbol,\n    action: 'CLOSE_REMAINING',\n    closeVolume: closeVolume,\n    closePercentage: 50,\n    direction: position.direction,\n    unrealizedPnLPips: position.unrealizedPnLPips,\n    comment: `TP2 hit at ${position.unrealizedPnLPips.toFixed(1)} pips - closing remaining 50%`\n  }\n};"
+      },
+      "name": "Calculate Partial Close TP2",
+      "type": "n8n-nodes-base.function",
+      "position": [1100, 100]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/positions/{{ $json.positionId }}/close",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "volume", "value": "={{ $json.closeVolume }}"},
+            {"name": "comment", "value": "={{ $json.comment }}"}
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        }
+      },
+      "name": "Close 50% at TP2 via cTrader",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1320, 100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "stop-hit",
+              "leftValue": "={{ $json.unrealizedPnLPips }}",
+              "rightValue": 0,
+              "operator": {"type": "number", "operation": "lt"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Check if SL Hit (Negative Pips)",
+      "type": "n8n-nodes-base.if",
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Log trade result to journal when position is closed\nconst position = $input.first().json;\n\nreturn {\n  json: {\n    timestamp: new Date().toISOString(),\n    positionId: position.positionId,\n    symbol: position.symbol,\n    direction: position.direction,\n    entryPrice: position.entryPrice,\n    exitPrice: position.currentPrice,\n    volume: position.volume,\n    pnlPips: position.unrealizedPnLPips,\n    pnlAmount: position.unrealizedPnL,\n    result: position.unrealizedPnLPips >= 0 ? 'WIN' : 'LOSS',\n    tradeAge: Math.round((Date.now() - new Date(position.openTime).getTime()) / (1000 * 60)),\n    exitReason: position.unrealizedPnLPips >= 0 ? 'TAKE_PROFIT' : 'STOP_LOSS',\n    label: position.label,\n    status: 'CLOSED'\n  }\n};"
+      },
+      "name": "Prepare Trade Journal Entry",
+      "type": "n8n-nodes-base.function",
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/trade_journal",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "timestamp", "value": "={{ $json.timestamp }}"},
+            {"name": "position_id", "value": "={{ $json.positionId }}"},
+            {"name": "symbol", "value": "={{ $json.symbol }}"},
+            {"name": "direction", "value": "={{ $json.direction }}"},
+            {"name": "entry_price", "value": "={{ $json.entryPrice }}"},
+            {"name": "exit_price", "value": "={{ $json.exitPrice }}"},
+            {"name": "volume", "value": "={{ $json.volume }}"},
+            {"name": "pnl_pips", "value": "={{ $json.pnlPips }}"},
+            {"name": "pnl_amount", "value": "={{ $json.pnlAmount }}"},
+            {"name": "result", "value": "={{ $json.result }}"},
+            {"name": "trade_age_minutes", "value": "={{ $json.tradeAge }}"},
+            {"name": "exit_reason", "value": "={{ $json.exitReason }}"},
+            {"name": "label", "value": "={{ $json.label }}"},
+            {"name": "status", "value": "={{ $json.status }}"}
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "apikey", "value": "{{ $env.SUPABASE_KEY }}"},
+            {"name": "Authorization", "value": "Bearer {{ $env.SUPABASE_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"},
+            {"name": "Prefer", "value": "return=representation"}
+          ]
+        }
+      },
+      "name": "Log Trade to Supabase Journal",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "typeValidation": "strict"},
+          "conditions": [
+            {
+              "id": "tp1-threshold",
+              "leftValue": "={{ $json.unrealizedPnLPips }}",
+              "rightValue": 30,
+              "operator": {"type": "number", "operation": "gte"}
+            },
+            {
+              "id": "volume-check",
+              "leftValue": "={{ $json.volume }}",
+              "rightValue": 0.01,
+              "operator": {"type": "number", "operation": "gt"}
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "TP1 Hit? Check Volume",
+      "type": "n8n-nodes-base.if",
+      "position": [880, -300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Close 50% of position at TP1\nconst position = $input.first().json;\nconst closeVolume = Math.max(0.01, position.volume / 2);\n\nreturn {\n  json: {\n    positionId: position.positionId,\n    symbol: position.symbol,\n    action: 'CLOSE_50PCT',\n    closeVolume: closeVolume,\n    closePercentage: 50,\n    direction: position.direction,\n    unrealizedPnLPips: position.unrealizedPnLPips,\n    comment: `TP1 hit at ${position.unrealizedPnLPips.toFixed(1)} pips - closing 50%`\n  }\n};"
+      },
+      "name": "Calculate TP1 Partial Close",
+      "type": "n8n-nodes-base.function",
+      "position": [1100, -300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.CTRADER_API_URL }}/v2/positions/{{ $json.positionId }}/close",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {"name": "volume", "value": "={{ $json.closeVolume }}"},
+            {"name": "comment", "value": "={{ $json.comment }}"}
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {"response": {}}
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "Bearer {{ $env.CTRADER_ACCESS_TOKEN }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        }
+      },
+      "name": "Close 50% at TP1 via cTrader",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1320, -300]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "=🎯 *Trade Update*\\n\\n*Symbol:* {{ $json.symbol }}\\n*Direction:* {{ $json.direction }}\\n*Action:* {{ $json.action }}\\n*P&L:* {{ $json.unrealizedPnLPips }} pips\\n*Comment:* {{ $json.comment }}\\n\\n🕐 {{ $now.toISOString() }}"
+      },
+      "name": "Telegram Position Update",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "chat": "={{ $json }}",
+        "message": "=🔴 *Trade Closed*\\n\\n*Symbol:* {{ $json.symbol }}\\n*Direction:* {{ $json.direction }}\\n*Result:* {{ $json.result }}\\n*P&L:* {{ $json.pnlPips }} pips ({{ $json.pnlAmount.toFixed(2) }})\\n*Age:* {{ $json.tradeAge }} minutes\\n*Exit Reason:* {{ $json.exitReason }}\\n\\n📊 Position #{{ $json.positionId }} closed\\n🕐 {{ $now.toISOString() }}"
+      },
+      "name": "Telegram Trade Result",
+      "type": "n8n-nodes-base.telegram",
+      "position": [1540, 300]
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes Cron": {
+      "main": [[{"node": "Market Hours Gate", "type": "main", "index": 0}]]
+    },
+    "Market Hours Gate": {
+      "main": [[{"node": "Fetch Open Positions from cTrader", "type": "main", "index": 0}]]
+    },
+    "Fetch Open Positions from cTrader": {
+      "main": [[{"node": "Parse Positions Data", "type": "main", "index": 0}]]
+    },
+    "Parse Positions Data": {
+      "main": [
+        [{"node": "Check TP1 Threshold (30 pips)", "type": "main", "index": 0}]
+      ]
+    },
+    "Check TP1 Threshold (30 pips)": {
+      "main": [
+        [{"node": "Already at Breakeven?", "type": "main", "index": 0}],
+        [{"node": "Check TP2 Threshold (60 pips)", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Check if SL Hit (Negative Pips)", "type": "main", "index": 0}]
+      ]
+    },
+    "Already at Breakeven?": {
+      "main": [
+        [{"node": "Check TP2 Threshold (60 pips)", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Calculate Breakeven Stop", "type": "main", "index": 0}]
+      ]
+    },
+    "Calculate Breakeven Stop": {
+      "main": [[{"node": "Move SL to Breakeven via cTrader", "type": "main", "index": 0}]]
+    },
+    "Move SL to Breakeven via cTrader": {
+      "main": [[{"node": "Telegram Position Update", "type": "main", "index": 0}]]
+    },
+    "Check TP2 Threshold (60 pips)": {
+      "main": [
+        [{"node": "Calculate Partial Close TP2", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "TP1 Hit? Check Volume", "type": "main", "index": 0}]
+      ]
+    },
+    "TP1 Hit? Check Volume": {
+      "main": [
+        [{"node": "Calculate TP1 Partial Close", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Telegram Position Update", "type": "main", "index": 0}]
+      ]
+    },
+    "Calculate TP1 Partial Close": {
+      "main": [[{"node": "Close 50% at TP1 via cTrader", "type": "main", "index": 0}]]
+    },
+    "Close 50% at TP1 via cTrader": {
+      "main": [[{"node": "Telegram Position Update", "type": "main", "index": 0}]]
+    },
+    "Calculate Partial Close TP2": {
+      "main": [[{"node": "Close 50% at TP2 via cTrader", "type": "main", "index": 0}]]
+    },
+    "Close 50% at TP2 via cTrader": {
+      "main": [[{"node": "Telegram Position Update", "type": "main", "index": 0}]]
+    },
+    "Check if SL Hit (Negative Pips)": {
+      "main": [
+        [{"node": "Prepare Trade Journal Entry", "type": "main", "index": 0}]
+      ],
+      "false": [
+        [{"node": "Telegram Position Update", "type": "main", "index": 0}]
+      ]
+    },
+    "Prepare Trade Journal Entry": {
+      "main": [[{"node": "Log Trade to Supabase Journal", "type": "main", "index": 0}]]
+    },
+    "Log Trade to Supabase Journal": {
+      "main": [[{"node": "Telegram Trade Result", "type": "main", "index": 0}]]
+    },
+    "Telegram Position Update": {
+      "main": [[]]
+    },
+    "Telegram Trade Result": {
+      "main": [[]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "timezone": "UTC"
+  },
+  "tags": ["trading", "position-management", "automation", "ctrader"],
+  "description": "Automated position management: TP1 partial close, SL to breakeven, TP2 full close, trade journaling to Supabase",
+  "active": true
+}

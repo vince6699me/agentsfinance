@@ -1,0 +1,58 @@
+# Agent Configuration
+# AgentFinance v3 - Technical Analysis Agent (23)
+# Department: Trading Strategy Engine
+
+agent:
+  name: Technical Analysis Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/technical_analysis.py
+  skills:
+    - tech-rsi
+    - tech-macd
+    - tech-bollinger
+    - tech-ichimoku
+    - tech-adx
+    - tech-momentum
+    - tech-volume
+    - tech-divergence
+    - tech-confluence
+  budget: $18/month
+  triggers:
+    - webhook: /tech/analyze
+    - cron: "*/15 * * * 1-5"
+
+commands:
+  - name: /tech:scan
+    description: Scan all indicators
+    syntax: /tech:scan <SYMBOL>
+  - name: /tech:rsi
+    description: RSI analysis
+    syntax: /tech:rsi <SYMBOL>
+  - name: /tech:macd
+    description: MACD analysis
+    syntax: /tech:macd <SYMBOL>
+  - name: /tech:bb
+    description: Bollinger Bands
+    syntax: /tech:bb <SYMBOL>
+  - name: /tech:ichimoku
+    description: Ichimoku cloud
+    syntax: /tech:ichimoku <SYMBOL>
+  - name: /tech:adx
+    description: ADX trend strength
+    syntax: /tech:adx <SYMBOL>
+  - name: /tech:momentum
+    description: Full momentum suite
+    syntax: /tech:momentum <SYMBOL>
+  - name: /tech:volume
+    description: Volume analysis
+    syntax: /tech:volume <SYMBOL>
+  - name: /tech:confluence
+    description: Multi-indicator confluence
+    syntax: /tech:confluence <SYMBOL>
+  - name: /tech:strategy
+    description: Run named strategy
+    syntax: /tech:strategy <NAME>
+  - name: /tech:report
+    description: Technical report
+    syntax: /tech:report <SYMBOL>

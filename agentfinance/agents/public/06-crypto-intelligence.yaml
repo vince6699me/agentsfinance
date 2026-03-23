@@ -1,0 +1,35 @@
+# Agent Configuration
+# AgentFinance v3 - Crypto Intelligence Agent (06)
+# Department: Public Markets Intelligence
+
+agent:
+  name: Crypto Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/crypto_intelligence.py
+  skills:
+    - on-chain-metrics
+    - whale-tracking
+    - defi-analysis
+    - crypto-technical
+  budget: $12/month
+  triggers:
+    - webhook: /crypto/signal
+    - cron: "*/15 * * * *"  # Every 15 min
+
+commands:
+  - name: /crypto:analyze
+    description: Full crypto asset analysis
+    syntax: /crypto:analyze <SYMBOL>
+  - name: /crypto:onchain
+    description: On-chain metrics
+    syntax: /crypto:onchain <SYMBOL>
+  - name: /crypto:whales
+    description: Whale transaction alerts
+    syntax: /crypto:whales <SYMBOL>
+  - name: /crypto:defi
+    description: DeFi protocol metrics
+    syntax: /crypto:defi <PROTOCOL>
+  - name: /crypto:btc-dominance
+    description: Bitcoin dominance & flow
+    syntax: /crypto:btc-dominance

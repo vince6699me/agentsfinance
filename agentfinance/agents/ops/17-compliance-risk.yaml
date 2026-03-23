@@ -1,0 +1,32 @@
+# Agent Configuration
+# AgentFinance v3 - Compliance & Risk Monitoring Agent (17)
+# Department: Investment Operations
+
+agent:
+  name: Compliance & Risk Monitoring Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/ops/compliance_risk.py
+  skills:
+    - compliance-monitoring
+    - risk-thresholds
+    - alert-management
+    - audit-trail
+  budget: $12/month
+  triggers:
+    - webhook: /compliance/alert
+    - cron: "0 */4 * * 1-5"  # Every 4 hours
+
+commands:
+  - name: /compliance:status
+    description: Current compliance status
+    syntax: /compliance:status
+  - name: /compliance:alerts
+    description: Active compliance alerts
+    syntax: /compliance:alerts
+  - name: /compliance:thresholds
+    description: Risk threshold settings
+    syntax: /compliance:thresholds
+  - name: /compliance:audit
+    description: Audit trail
+    syntax: /compliance:audit [PERIOD]

@@ -1,0 +1,51 @@
+# docker-compose.yml — cTrader REST API Server
+# ===========================================
+# Runs the cTrader OpenAPI as a REST API Docker container.
+# Bridges HTTP REST calls → cTrader Protobuf TCP protocol.
+#
+# Usage:
+#   cp .env.example .env
+#   # Edit .env with your cTrader credentials
+#   docker compose up --build
+#
+# Endpoints: http://localhost:9009
+# Swagger UI:  http://localhost:9009/docs
+# Health:      http://localhost:9009/health
+
+services:
+  ctrader-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentfinance-ctrader-api
+    restart: unless-stopped
+    ports:
+      - "9009:9009"
+    env_file:
+      - ../.env
+    environment:
+      - CTRADER_CLIENT_ID=${CTRADER_CLIENT_ID}
+      - CTRADER_CLIENT_SECRET=${CTRADER_CLIENT_SECRET}
+      - CTRADER_ACCESS_TOKEN=${CTRADER_ACCESS_TOKEN}
+      - CTRADER_ACCOUNT_ID=${CTRADER_ACCOUNT_ID:-46729678}
+      - CTRADER_HOST=${CTRADER_HOST:-demo}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9009/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    volumes:
+      # Optional: mount for .env override
+      - ../.env:/app/.env:ro
+    networks:
+      - agentfinance-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  agentfinance-net:
+    driver: bridge

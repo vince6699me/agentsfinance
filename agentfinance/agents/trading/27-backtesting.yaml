@@ -1,0 +1,45 @@
+# Agent Configuration
+# AgentFinance v3 - Strategy Backtesting Agent (27)
+# Department: Trading Automation
+
+agent:
+  name: Strategy Backtesting Agent
+  model: none  # No LLM - purely quantitative, uses vectorbt/pandas
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/backtest_agent.py
+  skills:
+    - backtest-smc
+    - backtest-technical
+    - backtest-combined
+    - backtest-monte-carlo
+    - backtest-walk-forward
+  budget: $25/month
+  triggers:
+    - webhook: /backtest/run
+    - scheduled: on-demand
+
+commands:
+  - name: /backtest:run
+    description: Run backtest
+    syntax: /backtest:run <STRATEGY> <SYMBOL>
+  - name: /backtest:smc
+    description: SMC strategy backtest
+    syntax: /backtest:smc <SYMBOL>
+  - name: /backtest:compare
+    description: Compare two strategies
+    syntax: /backtest:compare <S1> <S2> <SYMBOL>
+  - name: /backtest:optimise
+    description: Optimize strategy params
+    syntax: /backtest:optimise <STRATEGY>
+  - name: /backtest:montecarlo
+    description: Monte Carlo simulation
+    syntax: /backtest:montecarlo <STRATEGY>
+  - name: /backtest:walkforward
+    description: Walk-forward analysis
+    syntax: /backtest:walkforward <STRATEGY>
+  - name: /backtest:report
+    description: Backtest report
+    syntax: /backtest:report <RUN-ID>
+  - name: /backtest:export
+    description: Export backtest data
+    syntax: /backtest:export <RUN-ID>

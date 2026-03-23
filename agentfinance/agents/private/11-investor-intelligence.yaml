@@ -1,0 +1,31 @@
+# Agent Configuration
+# AgentFinance v3 - Investor Intelligence Agent (11)
+# Department: Private Markets Intelligence
+
+agent:
+  name: Investor Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/investor_intelligence.py
+  skills:
+    - investor-tracking
+    - fundraising-intelligence
+    - investor-mapping
+    - network-analysis
+  budget: $10/month
+  triggers:
+    - webhook: /investors/update
+
+commands:
+  - name: /investors:profile
+    description: Investor/fund profile
+    syntax: /investors:profile <INVESTOR_NAME>
+  - name: /investors:portfolio
+    description: Investor's portfolio companies
+    syntax: /investors:portfolio <INVESTOR_NAME>
+  - name: /investors:raised
+    description: Companies raised from investor
+    syntax: /investors:raised <INVESTOR_NAME>
+  - name: /investors:matching
+    description: Match investors to companies
+    syntax: /investors:matching <COMPANY>

@@ -1,0 +1,30 @@
+# Agent Configuration
+# AgentFinance v3 - Private Company Intelligence Agent (07)
+# Department: Private Markets Intelligence
+
+agent:
+  name: Private Company Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/company_intelligence.py
+  skills:
+    - company-database
+    - business-model-analysis
+    - market-research
+  budget: $10/month
+  triggers:
+    - webhook: /private/company
+
+commands:
+  - name: /private:search
+    description: Search private company database
+    syntax: /private:search <COMPANY_NAME>
+  - name: /private:profile
+    description: Company profile overview
+    syntax: /private:profile <COMPANY_NAME>
+  - name: /private:news
+    description: Recent news on private company
+    syntax: /private:news <COMPANY_NAME>
+  - name: /private:similar
+    description: Find similar public comparables
+    syntax: /private:similar <COMPANY_NAME>

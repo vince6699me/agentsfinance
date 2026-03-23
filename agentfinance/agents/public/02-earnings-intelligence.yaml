@@ -1,0 +1,35 @@
+# Agent Configuration
+# AgentFinance v3 - Earnings Intelligence Agent (02)
+# Department: Public Markets Intelligence
+
+agent:
+  name: Earnings Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/earnings_intelligence.py
+  skills:
+    - earnings-calendar
+    - eps-surprise-ai
+    - revenue-analysis
+    - guidance-analysis
+  budget: $15/month
+  triggers:
+    - webhook: /earnings/upcoming
+    - cron: "0 8 * * 1-5"  # Every morning
+
+commands:
+  - name: /earnings:today
+    description: Earnings releasing today
+    syntax: /earnings:today
+  - name: /earnings:week
+    description: This week's earnings schedule
+    syntax: /earnings:week
+  - name: /earnings:estimate
+    description: EPS/revenue estimates for ticker
+    syntax: /earnings:estimate <TICKER>
+  - name: /earnings:history
+    description: Historical earnings performance
+    syntax: /earnings:history <TICKER>
+  - name: /earnings:whisper
+    description: Whisper number vs consensus
+    syntax: /earnings:whisper <TICKER>

@@ -1,0 +1,34 @@
+# Agent Configuration
+# AgentFinance v3 - Financial Statements Agent (04)
+# Department: Public Markets Intelligence
+
+agent:
+  name: Financial Statements Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/financial_statements.py
+  skills:
+    - income-statement
+    - balance-sheet
+    - cash-flow-analysis
+    - ratio-analysis
+  budget: $12/month
+  triggers:
+    - webhook: /financials/statement
+
+commands:
+  - name: /financials:income
+    description: Income statement
+    syntax: /financials:income <TICKER> [QUARTER|ANNUAL]
+  - name: /financials:balance
+    description: Balance sheet
+    syntax: /financials:balance <TICKER> [QUARTER|ANNUAL]
+  - name: /financials:cashflow
+    description: Cash flow statement
+    syntax: /financials:cashflow <TICKER> [QUARTER|ANNUAL]
+  - name: /financials:ratios
+    description: Financial ratios
+    syntax: /financials:ratios <TICKER>
+  - name: /financials:trends
+    description: 5-year trend analysis
+    syntax: /financials:trends <TICKER>

@@ -1,0 +1,35 @@
+# Agent Configuration
+# AgentFinance v3 - Stock Analysis Agent (03)
+# Department: Public Markets Intelligence
+
+agent:
+  name: Stock Analysis Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/public/stock_analysis.py
+  skills:
+    - financial-statement-analysis
+    - valuation-metrics
+    - growth-analysis
+    - dividend-analysis
+  budget: $12/month
+  triggers:
+    - webhook: /stock/analyze
+    - cron: "0 */4 * * 1-5"  # Every 4 hours
+
+commands:
+  - name: /stock:analyze
+    description: Full stock analysis
+    syntax: /stock:analyze <TICKER>
+  - name: /stock:metrics
+    description: Key valuation metrics
+    syntax: /stock:metrics <TICKER>
+  - name: /stock:growth
+    description: Revenue/earnings growth analysis
+    syntax: /stock:growth <TICKER>
+  - name: /stock:comparables
+    description: Peer comparison
+    syntax: /stock:comparables <TICKER>
+  - name: /stock:fair-value
+    description: Fair value estimate (DCF/Comparables)
+    syntax: /stock:fair-value <TICKER>

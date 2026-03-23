@@ -1,0 +1,34 @@
+# Agent Configuration
+# AgentFinance v3 - Deep Research Agent (14)
+# Department: Research Intelligence
+
+agent:
+  name: Deep Research Agent
+  model: llama3.1:70b  # Upgraded: needs long context for research synthesis
+  adapter: python
+  script: /home/agent/agentfinance/agents/research/deep_research.py
+  skills:
+    - market-research
+    - competitive-analysis
+    - industry-analysis
+    - synthesis
+  budget: $15/month
+  triggers:
+    - webhook: /research/start
+
+commands:
+  - name: /research:topic
+    description: Deep research on topic
+    syntax: /research:topic <TOPIC>
+  - name: /research:industry
+    description: Industry analysis
+    syntax: /research:industry <INDUSTRY>
+  - name: /research:competitor
+    description: Competitive landscape
+    syntax: /research:competitor <COMPANY>
+  - name: /research:trend
+    description: Market trend analysis
+    syntax: /research:trend <TREND>
+  - name: /research:synthesis
+    description: Synthesize multiple sources
+    syntax: /research:synthesis <TOPIC>

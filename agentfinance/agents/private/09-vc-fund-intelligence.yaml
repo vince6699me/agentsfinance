@@ -1,0 +1,31 @@
+# Agent Configuration
+# AgentFinance v3 - VC Fund Intelligence Agent (09)
+# Department: Private Markets Intelligence
+
+agent:
+  name: VC Fund Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/private/vc_fund_intelligence.py
+  skills:
+    - fund-performance
+    - portfolio-analysis
+    - lp-reporting
+    - fund-raising
+  budget: $10/month
+  triggers:
+    - webhook: /funds/intelligence
+
+commands:
+  - name: /funds:performance
+    description: Fund performance metrics
+    syntax: /funds:performance <FUND_NAME>
+  - name: /funds:portfolio
+    description: Fund portfolio companies
+    syntax: /funds:portfolio <FUND_NAME>
+  - name: /funds:strategy
+    description: Fund investment thesis
+    syntax: /funds:strategy <FUND_NAME>
+  - name: /funds:compare
+    description: Compare fund strategies
+    syntax: /funds:compare <FUND_A> <FUND_B>

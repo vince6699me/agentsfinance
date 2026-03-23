@@ -1,0 +1,248 @@
+{
+  "name": "AgentFinance - SMC Signal to Execution Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Every 15 Minutes Cron",
+      "type": "n8n-nodes-base.cron",
+      "position": [0, 0],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "functionCode": "// Check if market is open (Mon-Fri, 00:00-22:00 UTC)\nconst now = new Date();\nconst day = now.getUTCDay();\nconst hour = now.getUTCHours();\n\nconst isWeekday = day >= 1 && day <= 5;\nconst isMarketHours = hour >= 0 && hour < 22;\n\nif (isWeekday && isMarketHours) {\n  return [{}];\n}\nreturn [];"
+      },
+      "name": "Market Hours Check",
+      "type": "n8n-nodes-base.function",
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Check active kill zones\nimport datetime\n\nKILL_ZONES = {\n    \"Asian\": {\"start\": \"21:00\", \"end\": \"04:00\"},\n    \"London Open\": {\"start\": \"02:50\", \"end\": \"04:00\"},\n    \"London\": {\"start\": \"03:00\", \"end\": \"12:00\"},\n    \"New York\": {\"start\": \"08:00\", \"end\": \"17:00\"},\n    \"London Close\": {\"start\": \"10:30\", \"end\": \"11:00\"}\n}\n\ndef get_active_sessions():\n    utc_now = datetime.datetime.now(datetime.timezone.utc)\n    est_offset = -5 if (utc_now.month < 3 or utc_now.month > 11) else -4\n    est_time = utc_now + datetime.timedelta(hours=est_offset)\n    current = est_time.strftime(\"%H:%M\")\n    \n    active = []\n    for name, data in KILL_ZONES.items():\n        start, end = data[\"start\"], data[\"end\"]\n        if start > end:  # Overnight\n            if current >= start or current <= end:\n                active.append(name)\n        else:\n            if start <= current <= end:\n                active.append(name)\n    return active\n\nactive_sessions = get_active_sessions()\nreturn {\"sessions\": active_sessions, \"active\": len(active_sessions) > 0}"
+      },
+      "name": "Check Kill Zones",
+      "type": "n8n-nodes-base.python",
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "sessions-active",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Session Active?",
+      "type": "n8n-nodes-base.if",
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Fetch OHLCV for all monitored symbols\n# Returns sample data for demo\n\nsymbols = [\"EURUSD\", \"GBPUSD\", \"USDJPY\", \"AUDUSD\", \"XAUUSD\"]\ntimeframe = \"H1\"\n\nohlcv_data = {}\nfor symbol in symbols:\n    # In production, fetch from OANDA/Polygon API\n    ohlcv_data[symbol] = {\n        \"symbol\": symbol,\n        \"timeframe\": timeframe,\n        \"status\": \"fetched\"\n    }\n\nreturn ohlcv_data"
+      },
+      "name": "Fetch OHLCV Data",
+      "type": "n8n-nodes-base.python",
+      "position": [880, -80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Run SMC analysis on all symbols\nimport sys\nsys.path.append('/home/agent/agentfinance/trading')\n\n# For demo, return mock analysis\nresults = {}\nfor symbol in [\"EURUSD\", \"GBPUSD\", \"USDJPY\"]:\n    results[symbol] = {\n        \"bias\": \"BULLISH\",\n        \"confluence_score\": 0.78,\n        \"order_blocks\": [{\"type\": \"bullish\", \"quality\": \"high\"}],\n        \"fvgs\": [{\"type\": \"bullish\", \"filled\": False}],\n        \"setups\": [{\n            \"type\": \"LONG\",\n            \"entry\": 1.0850,\n            \"stop_loss\": 1.0800,\n            \"take_profit_1\": 1.0900,\n            \"risk_reward\": 2.0,\n            \"confidence\": 0.78\n        }]\n    }\n\nreturn {\"analyses\": results}"
+      },
+      "name": "SMC Analysis",
+      "type": "n8n-nodes-base.python",
+      "position": [1100, -80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Filter setups by confluence score >= 0.75\nanalyses = $input.first().json.analyses\n\nhigh_conf_setups = []\nfor symbol, analysis in analyses.items():\n    if analysis.confluence_score >= 0.75:\n        for setup in analysis.setups:\n            setup.symbol = symbol\n            setup.bias = analysis.bias\n            setup.score = analysis.confluence_score\n            high_conf_setups.append(setup)\n\nreturn {\"setups\": high_conf_setups, \"count\": len(high_conf_setups)}"
+      },
+      "name": "Filter High Confidence",
+      "type": "n8n-nodes-base.python",
+      "position": [1320, -80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Technical confirmation check\nsetups = $input.first().json.setups\n\nconfirmed = []\nfor setup in setups:\n    # Simplified technical check\n    setup.tech_confirmed = True\n    setup.tech_score = 0.72\n    confirmed.append(setup)\n\nreturn {\"confirmed_setups\": confirmed}"
+      },
+      "name": "Technical Confirmation",
+      "type": "n8n-nodes-base.python",
+      "position": [1540, -80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Risk check using RiskManager\n# Returns PASS/HOLD/BLOCK status\n\nsetups = $input.first().json.confirmed_setups\n\napproved = []\nfor setup in setups:\n    # Simplified risk check\n    setup.risk_status = \"PASS\"\n    setup.risk_warnings = []\n    approved.append(setup)\n\nreturn {\"approved_setups\": approved, \"count\": len(approved)}"
+      },
+      "name": "Risk Check",
+      "type": "n8n-nodes-base.python",
+      "position": [1760, -80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Calculate position size\napproved = $input.first().json.approved_setups\n\nfor setup in approved:\n    setup.position_size = 0.10  # 0.10 lots\n    setup.risk_amount = 100  # $100\n\nreturn {\"ready_setups\": approved}"
+      },
+      "name": "Position Sizing",
+      "type": "n8n-nodes-base.python",
+      "position": [1980, -80]
+    },
+    {
+      "parameters": {
+        "operation": "prepare",
+        "message": {
+          "text": "🟢 TRADE ALERT: BUY {{ $json.symbol }} {{ $json.entry }}\nSL: {{ $json.stop_loss }} | TP1: {{ $json.take_profit_1 }}\nR:R 1:{{ $json.risk_reward }} | Conf: {{ $json.confidence }}%\n\n[✅ EXECUTE] [👁 WATCH] [❌ REJECT]"
+        },
+        "additionalFields": {}
+      },
+      "name": "Build Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "position": [2200, -80]
+    },
+    {
+      "parameters": {
+        "chatId": "-100123456789",
+        "text": "= \"🟢 TRADE ALERT: BUY \" & $json.symbol & \" \" & $json.entry & \"\\nSL: \" & $json.stop_loss & \" | TP1: \" & $json.take_profit_1 & \"\\nR:R 1:\" & $json.risk_reward & \" | Conf: \" & $json.confidence & \"%\"",
+        "replyKeyboard": {
+          "buttons": [
+            [{"text": "✅ EXECUTE"}, {"text": "👁 WATCH"}, {"text": "❌ REJECT"}]
+          ],
+          "resize_keyboard": true,
+          "one_time_keyboard": true
+        }
+      },
+      "name": "Send Telegram Alert",
+      "type": "n8n-nodes-base.telegramSender",
+      "position": [2420, -80]
+    },
+    {
+      "parameters": {
+        "webhookName": "Telegram Callback",
+        "path": "telegram-callback",
+        "httpMethod": "POST",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [2200, 80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "execute-command",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "✅ EXECUTE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Execute Command?",
+      "type": "n8n-nodes-base.if",
+      "position": [2420, 80]
+    },
+    {
+      "parameters": {
+        "pythonCode": "# Execute trade via cTrader\nsetup = $input.first().json\n\n# In production, call cTrader API\nresult = {\n    \"success\": True,\n    \"order_id\": \"DEMO_\" + str(int(time.time())),\n    \"position_id\": setup.id,\n    \"fill_price\": setup.entry,\n    \"status\": \"EXECUTED\"\n}\n\nreturn result"
+      },
+      "name": "Execute Trade",
+      "type": "n8n-nodes-base.python",
+      "position": [2640, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "-100123456789",
+        "text": "= \"✅ Position opened: \" & $json.position_id & \" | \" & $json.symbol & \" @ \" & $json.fill_price"
+      },
+      "name": "Trade Confirmation",
+      "type": "n8n-nodes-base.telegramSender",
+      "position": [2860, 0]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes Cron": {
+      "main": [[{"node": "Market Hours Check", "type": "main", "index": 0}]]
+    },
+    "Market Hours Check": {
+      "main": [[{"node": "Check Kill Zones", "type": "main", "index": 0}]]
+    },
+    "Check Kill Zones": {
+      "main": [[{"node": "Session Active?", "type": "main", "index": 0}]]
+    },
+    "Session Active?": {
+      "main": [[{"node": "Fetch OHLCV Data", "type": "main", "index": 0}], [{"node": "Send Session Update", "type": "main", "index": 0}]]
+    },
+    "Fetch OHLCV Data": {
+      "main": [[{"node": "SMC Analysis", "type": "main", "index": 0}]]
+    },
+    "SMC Analysis": {
+      "main": [[{"node": "Filter High Confidence", "type": "main", "index": 0}]]
+    },
+    "Filter High Confidence": {
+      "main": [[{"node": "Technical Confirmation", "type": "main", "index": 0}]]
+    },
+    "Technical Confirmation": {
+      "main": [[{"node": "Risk Check", "type": "main", "index": 0}]]
+    },
+    "Risk Check": {
+      "main": [[{"node": "Position Sizing", "type": "main", "index": 0}]]
+    },
+    "Position Sizing": {
+      "main": [[{"node": "Send Telegram Alert", "type": "main", "index": 0}]]
+    },
+    "Send Telegram Alert": {
+      "main": [[{"node": "Telegram Webhook", "type": "main", "index": 0}]]
+    },
+    "Telegram Webhook": {
+      "main": [[{"node": "Execute Command?", "type": "main", "index": 0}]]
+    },
+    "Execute Command?": {
+      "main": [[{"node": "Execute Trade", "type": "main", "index": 0}], []]
+    },
+    "Execute Trade": {
+      "main": [[{"node": "Trade Confirmation", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["agentfinance", "trading", "smc", "automation"],
+  "triggerCount": 1,
+  "updatedAt": "2026-03-20T00:00:00.000Z",
+  "versionId": "1"
+}

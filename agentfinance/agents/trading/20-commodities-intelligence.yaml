@@ -1,0 +1,48 @@
+# Agent Configuration
+# AgentFinance v3 - Commodities Intelligence Agent (20)
+# Department: Asset Class Intelligence
+
+agent:
+  name: Commodities Intelligence Agent
+  model: codellama:34b
+  adapter: python
+  script: /home/agent/agentfinance/agents/trading/commodities_intelligence.py
+  skills:
+    - commodities-smc
+    - commodities-cot
+    - commodities-seasonality
+    - commodities-fundamentals
+    - commodities-eia-report
+    - commodities-wasde
+    - commodities-geopolitical
+    - commodities-inventory
+  budget: $20/month
+  triggers:
+    - cron: "*/30 * * * 1-5"  # Every 30 min during markets
+    - webhook: /commodities/signal
+
+commands:
+  - name: /commod:gold
+    description: Gold analysis
+    syntax: /commod:gold
+  - name: /commod:oil
+    description: Crude oil analysis
+    syntax: /commod:oil [WTI|BRENT]
+  - name: /commod:agri
+    description: Agricultural commodity
+    syntax: /commod:agri <SYMBOL>
+  - name: /commod:seasonality
+    description: Seasonality patterns
+    syntax: /commod:seasonality <SYMBOL>
+  - name: /commod:inventory
+    description: EIA inventory data
+    syntax: /commod:inventory
+  - name: /commod:geopolitical
+    description: Geopolitical risk premium
+    syntax: /commod:geopolitical
+  - name: /commod:setup
+    description: Trade setup for commodity
+    syntax: /commod:setup <SYMBOL>
+  - name: /commod:report
+    description: Daily commodities briefing
+    syntax: /commod:report
