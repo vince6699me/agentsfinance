@@ -1,0 +1,32 @@
+{
+  "id": "agentfinance-v5-rebuild-01",
+  "seq": "01",
+  "title": "Create FastAPI project structure with modular design",
+  "status": "pending",
+  "depends_on": [],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md",
+    "/home/greywolf/.config/opencode/context/development/principles/api-design.md",
+    "/home/greywolf/.config/opencode/context/development/principles/clean-code.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "FastAPI project created with app/ directory structure",
+    "Modular design with separate routers for each team",
+    "Base config.py with environment variables",
+    "Requirements.txt with all dependencies",
+    "Project runs with uvicorn"
+  ],
+  "deliverables": [
+    "app/main.py",
+    "app/config.py",
+    "app/__init__.py",
+    "requirements.txt"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance"
+}

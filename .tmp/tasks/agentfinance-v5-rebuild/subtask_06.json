@@ -1,0 +1,28 @@
+{
+  "id": "agentfinance-v5-rebuild-06",
+  "seq": "06",
+  "title": "Implement 6 philosophy-based departments structure",
+  "status": "pending",
+  "depends_on": ["05"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Department structure implemented: Fundamental, Technical, Sentiment, Intermarket, Quantitative, SMC/ICT",
+    "Department base classes/abstract classes created",
+    "Each department has proper agent registration",
+    "Department routing in API"
+  ],
+  "deliverables": [
+    "app/teams/analysis/departments/*.py",
+    "app/teams/analysis/__init__.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "analysis-departments"
+}

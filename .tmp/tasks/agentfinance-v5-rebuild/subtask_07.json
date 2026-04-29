@@ -1,0 +1,31 @@
+{
+  "id": "agentfinance-v5-rebuild-07",
+  "seq": "07",
+  "title": "Create 21 agent framework with role-based prompts",
+  "status": "pending",
+  "depends_on": ["06"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "21 agents defined with unique roles and responsibilities",
+    "Agent base class with common methods",
+    "Role-based prompt templates for each agent",
+    "Agent registry for dynamic agent lookup",
+    "Ollama integration for LLM calls"
+  ],
+  "deliverables": [
+    "app/agents/base.py",
+    "app/agents/registry.py",
+    "app/agents/prompts/*.py",
+    "app/agents/team*.py (individual agent implementations)"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "agent-framework"
+}

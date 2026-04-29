@@ -1,0 +1,31 @@
+{
+  "id": "agentfinance-v5-rebuild-15",
+  "seq": "15",
+  "title": "Implement position sizing with ATR-based stops",
+  "status": "pending",
+  "depends_on": ["14"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "ATR (14) based stop distance calculation",
+    "Strategy tier ATR multiples: Scalp=0.5x, Short-term=1.0x, Swing=1.5x, Position=2.0x",
+    "Position size calculation from stop distance and account risk",
+    "ADR-based position sizing (Average Daily Range)",
+    "ADR consumption limit: 80% max",
+    "Max risk per trade: 1-2% of account"
+  ],
+  "deliverables": [
+    "app/risk/position_sizing.py",
+    "app/risk/atr_calculator.py",
+    "app/risk/adr_calculator.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "position-sizing"
+}

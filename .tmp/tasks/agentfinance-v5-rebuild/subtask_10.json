@@ -1,0 +1,33 @@
+{
+  "id": "agentfinance-v5-rebuild-10",
+  "seq": "10",
+  "title": "Implement ICT-07 to ICT-09 with v2 enhancements",
+  "status": "pending",
+  "depends_on": ["09"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md",
+    "/home/greywolf/agentsfinance/smc-ict/ICT-Strategies-Enhancement-Reference.md"
+  ],
+  "acceptance_criteria": [
+    "ICT-07 HTF Structure Break with 4-tier TP structure",
+    "ICT-08 Discount-Premium Position with 4-tier TP and 20-week IPA range",
+    "ICT-09 Silver Bullet with 3 time windows and minimum movement framework",
+    "4-tier TP structure: TP1=1R, TP2=1.5-2R, TP3=3R, TP4=structure extreme",
+    "Weekly close management for position trades"
+  ],
+  "deliverables": [
+    "app/strategies/ict/ict_07.py",
+    "app/strategies/ict/ict_08.py",
+    "app/strategies/ict/ict_09.py",
+    "app/strategies/ict/components/take_profit.py",
+    "app/strategies/ict/components/silver_bullet.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "ict-strategies"
+}

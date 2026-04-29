@@ -1,0 +1,30 @@
+{
+  "id": "agentfinance-v5-rebuild-12",
+  "seq": "12",
+  "title": "Create scanner endpoints for sector scanning",
+  "status": "pending",
+  "depends_on": ["07", "11"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/development/principles/api-design.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Endpoint /scan-sector/{sector} returns ranked opportunities for single sector",
+    "Endpoint /scan-all-sectors scans all 5 sectors in parallel",
+    "Endpoint /sector-opportunities/{sector} returns top-5 current opportunities with confidence",
+    "Scanner team structure with 5 sector scanner agents",
+    "Proper error handling for invalid sectors"
+  ],
+  "deliverables": [
+    "app/api/scanner.py",
+    "app/teams/scanner/coordinator.py",
+    "app/teams/scanner/sector_*.py (5 sector scanners)"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "scanner-team"
+}

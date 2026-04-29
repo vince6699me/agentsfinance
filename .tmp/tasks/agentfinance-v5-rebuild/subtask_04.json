@@ -1,0 +1,31 @@
+{
+  "id": "agentfinance-v5-rebuild-04",
+  "seq": "04",
+  "title": "Set up logging and error handling infrastructure",
+  "status": "completed",
+  "agent_id": "coder-agent",
+  "started_at": "2026-04-29T00:00:00Z",
+  "completed_at": "2026-04-29T12:00:00Z",
+  "depends_on": ["01"],
+  "parallel": true,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md",
+    "/home/greywolf/.config/opencode/context/core/standards/security-patterns.md"
+  ],
+  "reference_files": [],
+  "acceptance_criteria": [
+    "Logging configured with proper levels (DEBUG, INFO, WARNING, ERROR)",
+    "Error handling middleware in FastAPI",
+    "Structured logging with JSON format",
+    "Exception handlers for common errors"
+  ],
+  "deliverables": [
+    "app/core/logging.py",
+    "app/core/middleware.py",
+    "app/core/exceptions.py",
+    "app/core/error_handlers.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance"
+}

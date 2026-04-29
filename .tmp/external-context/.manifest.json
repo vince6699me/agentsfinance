@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-04-29",
+  "libraries": {
+    "fastapi": {
+      "files": [
+        {
+          "filename": "project-setup.md",
+          "topic": "project setup, routing, dependencies, SQLite",
+          "tech_stack": "Python",
+          "fetched": "2026-04-29",
+          "source": "Official docs (fastapi.tiangolo.com)"
+        }
+      ]
+    },
+    "vite": {
+      "files": [
+        {
+          "filename": "project-setup.md",
+          "topic": "project setup, build tool, patterns",
+          "tech_stack": "React/Vite",
+          "fetched": "2026-04-29",
+          "source": "Official docs (vitejs.dev)"
+        }
+      ]
+    },
+    "sqlite3": {
+      "files": [
+        {
+          "filename": "database-connection.md",
+          "topic": "database connection, async support, patterns",
+          "tech_stack": "Python",
+          "fetched": "2026-04-29",
+          "source": "Official docs (docs.python.org)"
+        }
+      ]
+    }
+  }
+}

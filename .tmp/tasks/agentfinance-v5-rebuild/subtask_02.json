@@ -1,0 +1,29 @@
+{
+  "id": "agentfinance-v5-rebuild-02",
+  "seq": "02",
+  "title": "Set up SQLite database with schema for signals, trades, agents, strategies",
+  "status": "pending",
+  "depends_on": ["01"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md",
+    "/home/greywolf/.config/opencode/context/development/principles/clean-code.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "SQLite database created with all required tables",
+    "Tables: signals, trades, agents, strategies, portfolios, positions",
+    "Proper foreign key relationships",
+    "Database connection utility module"
+  ],
+  "deliverables": [
+    "app/database.py",
+    "app/models/*.py (SQLAlchemy models)",
+    "alembic.ini (optional migrations)"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance"
+}

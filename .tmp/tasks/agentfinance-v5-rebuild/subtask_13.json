@@ -1,0 +1,34 @@
+{
+  "id": "agentfinance-v5-rebuild-13",
+  "seq": "13",
+  "title": "Implement Bull/Bear/Neutral debate mechanism with Fund Manager decision",
+  "status": "pending",
+  "depends_on": ["12"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Bull Analyst agent - argues long/buy case with confluence factors",
+    "Bear Analyst agent - argues short/sell case with counter-signals",
+    "Neutral/Risk Analyst - stress-tests both cases, evaluates risk",
+    "Fund Manager - synthesizes all cases, produces final decision with 0-100 confidence",
+    "Minimum confluence: 3 of 6 departments must support",
+    "Confidence threshold: >=65 for entry, >=80 for full position",
+    "Debate transcript logged to database"
+  ],
+  "deliverables": [
+    "app/teams/signals/debate.py",
+    "app/teams/signals/bull_analyst.py",
+    "app/teams/signals/bear_analyst.py",
+    "app/teams/signals/neutral_analyst.py",
+    "app/teams/signals/fund_manager.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "trade-signals"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "agentfinance-v5-rebuild-14",
+  "seq": "14",
+  "title": "Build 7-gate risk pipeline",
+  "status": "pending",
+  "depends_on": ["11", "13"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/security-patterns.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Gate 1 - System Halt: Check kill switch / paper mode",
+    "Gate 2 - Daily Loss Limit: Block if daily P&L < -5%",
+    "Gate 3 - Weekly Loss Limit: Block if weekly P&L < -10%",
+    "Gate 4 - News Window: Block if high-impact news within 30 min",
+    "Gate 5 - Spread Check: Block if spread > 2x historical average",
+    "Gate 6 - Correlation Check: Reduce 50% if correlation >0.7, block if >0.85",
+    "Gate 7 - Minimum Confidence: Block if <65, reduce 30% if 65-75, full if >=75",
+    "All gates return pass/fail with detailed reason",
+    "Risk team has absolute veto power"
+  ],
+  "deliverables": [
+    "app/teams/risk/pipeline.py",
+    "app/teams/risk/gates/*.py (7 gate implementations)",
+    "app/teams/risk/checklist_validator.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "risk-pipeline"
+}

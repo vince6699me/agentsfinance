@@ -1,0 +1,32 @@
+{
+  "id": "agentfinance-v5-rebuild",
+  "name": "AgentFinance v5 Complete Rebuild",
+  "status": "active",
+  "objective": "Complete rebuild of AgentFinance trading system with 8 operational teams, 21 specialized AI agents, 46 signal strategies across 5 market sectors using FastAPI + React/Vite + SQLite + Ollama",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md",
+    "/home/greywolf/.config/opencode/context/core/standards/security-patterns.md",
+    "/home/greywolf/.config/opencode/context/development/principles/api-design.md",
+    "/home/greywolf/.config/opencode/context/development/principles/clean-code.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md",
+    "/home/greywolf/agentsfinance/smc-ict/ICT-Strategies-Enhancement-Reference.md"
+  ],
+  "exit_criteria": [
+    "Stage 1: Project skeleton with FastAPI + SQLite + basic React dashboard",
+    "Stage 2: Team structure implemented with 6 departments + 21 agents",
+    "Stage 2: ICT strategies core (ICT-01 to ICT-09) with v2 enhancements",
+    "Stage 3: Scanner endpoints working (/scan-sector/{sector}, /scan-all-sectors)",
+    "Stage 3: Debate mechanism implemented (Bull/Bear/Neutral → Fund Manager)",
+    "Stage 3: Risk pipeline with 7 gates",
+    "Stage 4: Dashboard with signals view, activity feed, basic analytics"
+  ],
+  "subtask_count": 18,
+  "completed_count": 0,
+  "created_at": "2026-04-29T00:00:00Z",
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "core-infrastructure",
+  "release_slice": "v5.0"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "agentfinance-v5-rebuild-03",
+  "seq": "03",
+  "title": "Create basic React/Vite dashboard with sector selector",
+  "status": "pending",
+  "depends_on": ["01"],
+  "parallel": false,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/ui/web/ui-styling-standards.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "React/Vite project created with proper structure",
+    "Sector selector component (Forex, Commodities, Stocks, Indices, Crypto)",
+    "Basic dashboard layout with navigation",
+    "Project builds and runs successfully"
+  ],
+  "deliverables": [
+    "frontend/src/App.tsx",
+    "frontend/src/components/SectorSelector.tsx",
+    "frontend/src/pages/Dashboard.tsx",
+    "frontend/vite.config.ts"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance-frontend"
+}

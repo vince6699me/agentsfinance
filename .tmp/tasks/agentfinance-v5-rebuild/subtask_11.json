@@ -1,0 +1,31 @@
+{
+  "id": "agentfinance-v5-rebuild-11",
+  "seq": "11",
+  "title": "Add daily/weekly loss limits and risk management rules",
+  "status": "pending",
+  "depends_on": ["10"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/security-patterns.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md",
+    "/home/greywolf/agentsfinance/smc-ict/ICT-Strategies-Enhancement-Reference.md"
+  ],
+  "acceptance_criteria": [
+    "Daily loss limit: 5% of account - stop trading for the day",
+    "Weekly loss limit: 10% of account - skip next week",
+    "Max concurrent trades: 3 positions",
+    "Trade log template standardized",
+    "Risk management module with limit enforcement"
+  ],
+  "deliverables": [
+    "app/risk/limits.py",
+    "app/risk/manager.py",
+    "app/risk/trade_logger.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "risk-management"
+}

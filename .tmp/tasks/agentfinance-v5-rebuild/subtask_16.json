@@ -1,0 +1,31 @@
+{
+  "id": "agentfinance-v5-rebuild-16",
+  "seq": "16",
+  "title": "Expand dashboard with signals view and activity feed",
+  "status": "pending",
+  "depends_on": ["03", "13"],
+  "parallel": false,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/ui/web/ui-styling-standards.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Signals view page showing active signals with confidence scores",
+    "Activity feed showing real-time agent actions",
+    "Signal details: confidence gauge, confluence count, Bull/Bear/N breakdown",
+    "Debate transcript visibility on dashboard",
+    "Sector filter on signals page"
+  ],
+  "deliverables": [
+    "frontend/src/pages/Signals.tsx",
+    "frontend/src/components/ActivityFeed.tsx",
+    "frontend/src/components/SignalCard.tsx",
+    "frontend/src/components/DebateTranscript.tsx"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance-frontend",
+  "vertical_slice": "dashboard-expansion"
+}

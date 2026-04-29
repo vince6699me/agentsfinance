@@ -1,0 +1,26 @@
+{
+  "id": "agentfinance-v5-rebuild-05",
+  "seq": "05",
+  "title": "Create base API endpoints and health checks",
+  "status": "pending",
+  "depends_on": ["01", "02", "04"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/development/principles/api-design.md"
+  ],
+  "reference_files": [],
+  "acceptance_criteria": [
+    "Health check endpoint (/health) returns system status",
+    "Base router structure for all 8 teams",
+    "API documentation (OpenAPI/Swagger) accessible",
+    "Root endpoint returns API info"
+  ],
+  "deliverables": [
+    "app/api/health.py",
+    "app/api/__init__.py",
+    "app/routers/teams/*.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance"
+}

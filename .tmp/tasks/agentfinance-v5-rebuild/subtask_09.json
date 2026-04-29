@@ -1,0 +1,33 @@
+{
+  "id": "agentfinance-v5-rebuild-09",
+  "seq": "09",
+  "title": "Implement ICT-04 to ICT-06 with v2 enhancements",
+  "status": "pending",
+  "depends_on": ["08"],
+  "parallel": false,
+  "suggested_agent": "CoderAgent",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/core/standards/code-quality.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md",
+    "/home/greywolf/agentsfinance/smc-ict/ICT-Strategies-Enhancement-Reference.md"
+  ],
+  "acceptance_criteria": [
+    "ICT-04 Weekly Bias Expansion with MSS alternate entry",
+    "ICT-05 CHoCH Momentum Swing with breaker block alternate",
+    "ICT-06 Sell-Side Redistribution with bearish breaker block rules",
+    "MSS distinction from CHoCH implemented",
+    "Breaker block detection and entry rules"
+  ],
+  "deliverables": [
+    "app/strategies/ict/ict_04.py",
+    "app/strategies/ict/ict_05.py",
+    "app/strategies/ict/ict_06.py",
+    "app/strategies/ict/components/mss.py",
+    "app/strategies/ict/components/breaker_block.py"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance",
+  "vertical_slice": "ict-strategies"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "agentfinance-v5-rebuild-17",
+  "seq": "17",
+  "title": "Add basic analytics and performance tracking",
+  "status": "pending",
+  "depends_on": ["16"],
+  "parallel": false,
+  "suggested_agent": "OpenFrontendSpecialist",
+  "context_files": [
+    "/home/greywolf/.config/opencode/context/ui/web/ui-styling-standards.md"
+  ],
+  "reference_files": [
+    "/home/greywolf/agentsfinance/gen_v5.md"
+  ],
+  "acceptance_criteria": [
+    "Equity curve visualization",
+    "Win rate per strategy and sector",
+    "P&L attribution table",
+    "Sharpe/Sortino metrics display",
+    "Rolling win rate charts",
+    "Strategy performance comparison"
+  ],
+  "deliverables": [
+    "frontend/src/pages/Analytics.tsx",
+    "frontend/src/components/EquityCurve.tsx",
+    "frontend/src/components/PerformanceTable.tsx",
+    "frontend/src/components/StrategyMetrics.tsx"
+  ],
+  "bounded_context": "trading-system",
+  "module": "agentfinance-frontend",
+  "vertical_slice": "analytics"
+}
